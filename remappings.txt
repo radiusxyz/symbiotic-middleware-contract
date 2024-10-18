@@ -9,4 +9,4 @@
 @symbioticfi/core=lib/symbioticfi/core
 
 permit2=lib/Uniswap/permit2
-forge-std=lib/foundry-rs/forge-std
+forge-std/src=lib/foundry-rs/forge-std/src
