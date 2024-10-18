@@ -1,0 +1,24 @@
+[submodule "lib/symbioticfi/core"]
+	path = lib/symbioticfi/core
+	url = https://github.com/symbioticfi/core.git
+[submodule "lib/OpenZeppelin/openzeppelin-contracts"]
+	path = lib/OpenZeppelin/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts.git
+[submodule "lib/OpenZeppelin/openzeppelin-contracts-upgradeable"]
+	path = lib/OpenZeppelin/openzeppelin-contracts-upgradeable
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable.git
+[submodule "lib/symbioticfi/collateral"]
+	path = lib/symbioticfi/collateral
+	url = https://github.com/symbioticfi/collateral.git
+[submodule "lib/Uniswap/permit2"]
+	path = lib/Uniswap/permit2
+	url = https://github.com/Uniswap/permit2.git
+[submodule "lib/OpenZeppelin/openzeppelin-contracts-upgradeable_v4.7.0"]
+	path = lib/OpenZeppelin/openzeppelin-contracts-upgradeable_v4.7.0
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable.git
+[submodule "lib/foundry-rs/forge-std"]
+	path = lib/foundry-rs/forge-std
+	url = https://github.com/foundry-rs/forge-std.git
+[submodule "lib/symbioticfi/rewards"]
+	path = lib/symbioticfi/rewards
+	url = https://github.com/symbioticfi/rewards.git

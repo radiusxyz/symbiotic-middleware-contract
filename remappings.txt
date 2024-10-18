@@ -1,0 +1,12 @@
+@openzeppelin-contracts=lib/OpenZeppelin/openzeppelin-contracts
+@openzeppelin-contracts-upgradeable=lib/OpenZeppelin/openzeppelin-contracts-upgradeable_v4.7.0
+
+@openzeppelin/contracts-upgradeable/=lib/OpenZeppelin/openzeppelin-contracts-upgradeable/contracts/
+@openzeppelin/contracts/=lib/OpenZeppelin/openzeppelin-contracts/contracts/
+@symbiotic-core=lib/symbioticfi/core
+@symbiotic-collateral=lib/symbioticfi/collateral
+@symbiotic-rewards=lib/symbioticfi/rewards
+@symbioticfi/core=lib/symbioticfi/core
+
+permit2=lib/Uniswap/permit2
+forge-std=lib/foundry-rs/forge-std
