@@ -1,0 +1,7 @@
+{
+  "addresses": {
+    "delegator": "0xf3958635EDd2Df9D4c9Ca248fd7Bc53F49e9C711",
+    "slasher": "0x0000000000000000000000000000000000000000",
+    "vault": "0x7C7ceb9Ef4A4EbE265815EBf24E31905b6B86047"
+  }
+}
