@@ -43,14 +43,6 @@ contract ValidationServiceManagerDeployer is Script, Utils {
             minSlashingWindow
         );
 
-        // for (uint256 i = 0; i < vaults.length; ++i) {
-        //     middleware.registerVault(vaults[i]);
-        // }
-
-        // for (uint256 i = 0; i < operators.length; ++i) {
-        //     middleware.registerOperator(operators[i]);
-        // }
-
         string memory deployedContractAddresses_output = vm.serializeAddress(
             deployedContractAddresses,
             "validationServiceManager",
