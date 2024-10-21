@@ -25,7 +25,7 @@ interface IValidationServiceManager {
     error UnknownSlasherType();
 
     struct ValidatorData {
-        address operator;
+        address operatingAddress;
         uint256 stake;
     }
 

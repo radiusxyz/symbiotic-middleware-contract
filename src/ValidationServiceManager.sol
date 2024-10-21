@@ -21,7 +21,9 @@ import {Subnetwork} from "@symbiotic-core/src/contracts/libraries/Subnetwork.sol
 import {MapWithTimeData} from "src/libraries/MapWithTimeData.sol";
 import {IValidationServiceManager} from "src/IValidationServiceManager.sol";
 
-contract ValidationServiceManager is Ownable, IValidationServiceManager {
+import {OperatingAddressRegistry} from "./OperatingAddressRegistry.sol";
+
+contract ValidationServiceManager is Ownable, IValidationServiceManager, OperatingAddressRegistry {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
     using MapWithTimeData for EnumerableMap.AddressToUintMap;
     using Subnetwork for address;
@@ -112,7 +114,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager {
     }
 
     ///////////// Operator management
-    function registerOperator(address operator) external onlyOwner {
+    function registerOperator(address operator, address operatingAddress) external onlyOwner {
         if (operators.contains(operator)) {
             revert OperatorAlreadyRegistred();
         }
@@ -125,8 +127,18 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager {
             revert OperatorNotOptedIn();
         }
 
+        updateOperatingAddress(operator, operatingAddress);
+
         operators.add(operator);
         operators.enable(operator);
+    }
+
+    function updateOperatorOperatingAddress(address operator, address operatingAddress) external onlyOwner {
+        if (!operators.contains(operator)) {
+            revert OperatorNotRegistred();
+        }
+
+        updateOperatingAddress(operator, operatingAddress);
     }
 
     function pauseOperator(address operator) external onlyOwner {
@@ -246,9 +258,14 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager {
                 continue;
             }
 
+            address operatingAddress = getOperatorOperatingAddressAt(operator, epochStartTs);
+            if (operatingAddress == address(0)) {
+                continue;
+            }
+
             uint256 stake = getOperatorStake(operator, epochStartTs);
 
-            validatorsData[valIdx++] = ValidatorData(operator, stake);
+            validatorsData[valIdx++] = ValidatorData(operatingAddress, stake);
         }
 
         assembly ("memory-safe") {

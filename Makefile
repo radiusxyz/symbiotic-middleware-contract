@@ -38,21 +38,21 @@ start: ## Start blockchain
 
 ___SETUP___: ## 
 
-register: ## Register
+register: ## Register (Network & Operator)
 	./utils/core/01_register.sh
 
 ___VAULT___: ## 
 
-deposit: ## Despoit
+deposit: ## Despoit (Vault)
 	./utils/vault/01_deposit.sh
 
-delegate: ## Delegate
+delegate: ## Delegate (Vault)
 	./utils/vault/02_delegate.sh
 
 ___VALIDATION_SERVICE_MANAGER___: ## 
 
-register-vault: ## Register vault
+register-vault: ## Register vault (Vault)
 	./utils/validation_service_manager/01_register-vault.sh
 
-register-operator: ## Register operator
+register-operator: ## Register operator (Operator)
 	./utils/validation_service_manager/02_register-operator.sh

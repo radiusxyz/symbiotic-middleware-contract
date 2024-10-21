@@ -26,7 +26,7 @@ contract RegisterOperator is Script, Utils {
 
         address networkAddress = ValidationServiceManager(validationServiceManagerAddress).NETWORK();
 
-        ValidationServiceManager(validationServiceManagerAddress).registerOperator(operatorAddress);
+        ValidationServiceManager(validationServiceManagerAddress).registerOperator(operatorAddress, operatorAddress);
         
         vm.stopBroadcast();
     }
