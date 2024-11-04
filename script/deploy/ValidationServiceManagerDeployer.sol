@@ -19,18 +19,8 @@ contract ValidationServiceManagerDeployer is Script, Utils {
 
         string memory output1 = readOutput(symbioticCoreDeploymentOutput);
         address operatorRegistryAddress = convertAddress(vm.parseJson(output1, ".addresses.operatorRegistry"));
-        // address networkRegistryAddress = convertAddress(vm.parseJson(output1, ".addresses.networkRegistry"));
         address vaultFactoryAddress = convertAddress(vm.parseJson(output1, ".addresses.vaultFactory"));
         address operatorNetworkOptInServiceAddress = convertAddress(vm.parseJson(output1, ".addresses.operatorNetworkOptInService"));
-
-        string memory output2 = readOutput(vaultDeploymentOutput);
-        address vaultAddress = convertAddress(vm.parseJson(output2, ".addresses.vault"));
-
-        address[] memory vaults = new address[](1);
-        vaults[0] = vaultAddress;
-
-        address[] memory operators = new address[](1);
-        operators[0] = owner;
 
         ValidationServiceManager validationServiceManager = new ValidationServiceManager(
             owner, 

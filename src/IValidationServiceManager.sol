@@ -24,29 +24,30 @@ interface IValidationServiceManager {
     error TooBigSlashAmount();
     error UnknownSlasherType();
 
-    struct ValidatorData {
-        address operatingAddress;
-        uint256 stake;
-    }
-
     // STRUCTS
     struct Task {
         string clusterId;
         string rollupId;
 
-        uint64 blockNumber;
-        bytes blockCommitment;
+        uint256 blockNumber;
+        bytes32 blockCommitment;
 
-        uint32 taskCreatedBlock;
+        uint256 taskCreatedBlock;
+    }
+
+    struct ValidatorData {
+        address operatingAddress;
+        uint256 stake;
     }
 
     struct RollupTaskInfo {
-        uint32 latestTaskNumber;
+        uint256 latestTaskNumber;
         
-        mapping(uint32 => bytes32) allTaskHashes;
-        mapping(address => mapping(uint32 => bytes)) allTaskResponses;
+        mapping(uint256 => bytes32) blockCommitments;
+        mapping(uint256 => bytes32) allTaskHashes;
+        mapping(address => mapping(uint256 => bool)) allTaskResponses;
     } 
 
-    event NewTaskCreated(uint32 indexed taskIndex, Task task, bytes commitment, uint64 blockNumber, string rollupId, string clusterId, uint32 taskCreatedBlock);
-    event TaskResponded(uint32 indexed taskIndex, bytes commitment, uint64 blockNumber, string rollupId, string clusterId, uint32 taskCreatedBlock, address operator);
+    event NewTaskCreated(string clusterId, string rollupId, uint256 referenceTaskIndex, uint256 blockNumber, bytes32 blockCommitment, uint256 taskCreatedBlock);
+    event TaskResponded(string clusterId, string rollupId, uint256 referenceTaskIndex, bool response);
 }

@@ -275,90 +275,134 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
 
     ///////////// Task management
     function createNewTask(
-        bytes calldata _blockCommitment,
-        uint64 _blockNumber,
-        string calldata rollupId,
-        string calldata _clusterId
+        string calldata _clusterId,
+        string calldata _rollupId,
+        uint256 _blockNumber,
+        bytes32 _blockCommitment // merkle root / block_commitment
     ) public updateStakeCache(getCurrentEpoch()) {
-        // create a new task struct
+        require(_checkIncludingOperatingAddress() == true, "Operator is not registered");
+
         Task memory newTask;
-        newTask.blockCommitment = _blockCommitment;
-        newTask.blockNumber = _blockNumber;
-        newTask.rollupId = rollupId;
         newTask.clusterId = _clusterId;
-        newTask.taskCreatedBlock = uint32(block.number);
+        newTask.rollupId = _rollupId;
+        newTask.blockNumber = _blockNumber;
+        newTask.blockCommitment = _blockCommitment;
+        newTask.taskCreatedBlock = uint256(block.number);
 
-        rollupTaskInfos[rollupId].allTaskHashes[rollupTaskInfos[rollupId].latestTaskNumber] = keccak256(abi.encode(newTask));
-
-        emit NewTaskCreated(rollupTaskInfos[rollupId].latestTaskNumber, newTask, newTask.blockCommitment, newTask.blockNumber, newTask.rollupId, newTask.clusterId, newTask.taskCreatedBlock);
+        uint256 latestTaskNumber = rollupTaskInfos[_rollupId].latestTaskNumber;
         
-        rollupTaskInfos[rollupId].latestTaskNumber += 1;
+        rollupTaskInfos[_rollupId].latestTaskNumber += 1;
+        rollupTaskInfos[_rollupId].blockCommitments[latestTaskNumber] = _blockCommitment;
+        rollupTaskInfos[_rollupId].allTaskHashes[latestTaskNumber] = keccak256(abi.encode(newTask));
+
+        emit NewTaskCreated(_clusterId, _rollupId, latestTaskNumber, _blockNumber, _blockCommitment, newTask.taskCreatedBlock);
+    }
+
+    function _checkIncludingOperatingAddress() internal returns (bool) {
+        return true;
+        // TODO:  check
+        // if (!operators.contains(msg.sender)) {
+        //     revert OperatorNotRegistred();
+        // }
+
+        // uint48 epoch = getCurrentEpoch();
+        // uint48 epochStartTs = getEpochStartTs(epoch);
+
+        // // for epoch older than SLASHING_WINDOW total stake can be invalidated (use cache)
+        // if (epochStartTs < Time.timestamp() - SLASHING_WINDOW) {
+        //     revert TooOldEpoch();
+        // }
+
+        // if (epochStartTs > Time.timestamp()) {
+        //     revert InvalidEpoch();
+        // }
+        
+        // for (uint256 i; i < operators.length(); ++i) {
+        //     (address operator, uint48 enabledTime, uint48 disabledTime) = operators.atWithTimes(i);
+
+        //     if (operator == msg.sender) {
+        //         // just skip operator if it was added after the target epoch or paused
+        //         if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
+        //             revert OperatorNotActive();
+        //         }
+        //         break;
+        //     }          
+        // }
     }
 
     function respondToTask(
-        Task calldata task,
+        string calldata clusterId,
+        string calldata rollupId,
         uint32 referenceTaskIndex,
-        bytes calldata signature
+        bool response
     ) external {
-        if (!operators.contains(msg.sender)) {
-            revert OperatorNotRegistred();
-        }
-
-        uint48 epoch = getCurrentEpoch();
-        uint48 epochStartTs = getEpochStartTs(epoch);
-
-        // for epoch older than SLASHING_WINDOW total stake can be invalidated (use cache)
-        if (epochStartTs < Time.timestamp() - SLASHING_WINDOW) {
-            revert TooOldEpoch();
-        }
-
-        if (epochStartTs > Time.timestamp()) {
-            revert InvalidEpoch();
-        }
+        require(_checkIncludingOperatingAddress() == true, "Operator is not registered");
         
-        for (uint256 i; i < operators.length(); ++i) {
-            (address operator, uint48 enabledTime, uint48 disabledTime) = operators.atWithTimes(i);
-
-            if (operator == msg.sender) {
-                // just skip operator if it was added after the target epoch or paused
-                if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
-                    revert OperatorNotActive();
-                }
-
-                break;
-            }          
-        }
-        
-        // check that the task is valid, hasn't been responsed yet, and is being responded in time
-        require(
-            keccak256(abi.encode(task)) ==
-                rollupTaskInfos[task.rollupId].allTaskHashes[referenceTaskIndex],
-            "supplied task does not match the one recorded in the contract"
-        );
-
         // some logical checks
         require(
-            rollupTaskInfos[task.rollupId].allTaskResponses[msg.sender][referenceTaskIndex].length == 0,
+            rollupTaskInfos[rollupId].allTaskResponses[msg.sender][referenceTaskIndex] == false,
             "Operator has already responded to the task"
         );
 
-        // The message that was signed
-        bytes32 messageHash = keccak256(task.blockCommitment);
-        bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
-
-        // Recover the signer address from the signature
-        address signer = ethSignedMessageHash.recover(signature);
-
-        require(signer == msg.sender, "Message signer is not operator");
-
         // updating the storage with task responses
-        rollupTaskInfos[task.rollupId].allTaskResponses[msg.sender][referenceTaskIndex] = signature;
+        rollupTaskInfos[rollupId].allTaskResponses[msg.sender][referenceTaskIndex] = response;
+
+        // TODO: We should give reward (Here) / Over Threshold
 
         // emitting event
-        emit TaskResponded(referenceTaskIndex, task.blockCommitment, task.blockNumber, task.rollupId, task.clusterId, task.taskCreatedBlock, msg.sender);
+        emit TaskResponded(clusterId, rollupId, referenceTaskIndex, response);
     }
 
-    /////////////
+    ///////////// Called by user or v
+    function verify(
+        string calldata rollupId,
+        uint64 blockNumber, // for getting merkle root
+        uint256 order, // order
+
+        bytes32[] memory proof, // merkle path
+        bytes32[] memory partialProof, // for checking no blank transaction
+        bytes32 leaf // transaction_hash
+    ) public view returns (bool) {
+        bytes32 root = rollupTaskInfos[rollupId].blockCommitments[rollupTaskInfos[rollupId].latestTaskNumber];
+
+        // The merkle root is not stored. It means that the block is not finalized
+        if (root == bytes32(0)) {
+            return false;
+        }
+
+        // Check if the partial proof matches the first consecutive elements of the proof
+        // This is done to ensure, that the sequencer did not insert transactions 
+        // into blank spaces he left initially
+        if (partialProof.length > proof.length) {
+            return false;
+        }
+
+        for (uint256 i = 0; i < partialProof.length; i++) {
+            if (partialProof[i] != proof[i]) {
+                return false;
+            }
+        }
+
+        // If the partial proof is valid, proceed with the verification
+        bytes32 computedHash = leaf;
+        for (uint256 i = 0; i < proof.length; i++) {
+            bytes32 proofElement = proof[i];
+
+            if (order % 2 == 0) {
+                // Current node is a left child
+                computedHash = keccak256(abi.encodePacked(computedHash, proofElement));
+            } else {
+                // Current node is a right child
+                computedHash = keccak256(abi.encodePacked(proofElement, computedHash));
+            }
+
+            // Move to the parent node order
+            order = order / 2;
+        }
+
+        return computedHash == root;
+    }
+
     function slash(uint48 epoch, address operator, uint256 amount) public onlyOwner updateStakeCache(epoch) {
         uint48 epochStartTs = getEpochStartTs(epoch);
 
