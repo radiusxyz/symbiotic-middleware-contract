@@ -23,9 +23,7 @@ contract ValidationServiceManagerDeployer is Script, Utils {
         address operatorNetworkOptInServiceAddress = convertAddress(vm.parseJson(output1, ".addresses.operatorNetworkOptInService"));
 
         ValidationServiceManager validationServiceManager = new ValidationServiceManager(
-            owner, 
             network, 
-            operatorRegistryAddress, 
             vaultFactoryAddress, 
             operatorNetworkOptInServiceAddress, 
 

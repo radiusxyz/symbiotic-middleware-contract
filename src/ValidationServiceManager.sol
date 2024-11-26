@@ -18,6 +18,8 @@ import {ISlasher} from "@symbiotic-core/src/interfaces/slasher/ISlasher.sol";
 import {IVetoSlasher} from "@symbiotic-core/src/interfaces/slasher/IVetoSlasher.sol";
 import {Subnetwork} from "@symbiotic-core/src/contracts/libraries/Subnetwork.sol";
 
+import {ICollateral} from "@symbiotic-collateral/src/interfaces/ICollateral.sol";
+
 import {MapWithTimeData} from "src/libraries/MapWithTimeData.sol";
 import {IValidationServiceManager} from "src/IValidationServiceManager.sol";
 
@@ -30,13 +32,13 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     using ECDSAUpgradeable for bytes32;
 
     address public immutable NETWORK;
-    address public immutable OPERATOR_REGISTRY;
-    address public immutable OPERATOR_NET_OPTIN;
-    address public immutable VAULT_REGISTRY;
+    address public immutable OPERATOR_NET_OPT_IN;
+    address public immutable VAULT_FACTORY;
 
     uint48 public immutable EPOCH_DURATION;
     uint48 public immutable SLASHING_WINDOW;
     uint48 public immutable START_TIME;
+    
     uint48 private constant INSTANT_SLASHER_TYPE = 0;
     uint48 private constant VETO_SLASHER_TYPE = 1;
 
@@ -48,6 +50,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     
     EnumerableMap.AddressToUintMap private operators;
     EnumerableMap.AddressToUintMap private vaults;
+    EnumerableMap.AddressToUintMap private tokens;
 
     mapping(string => RollupTaskInfo) public rollupTaskInfos;
 
@@ -59,33 +62,32 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     }
 
     constructor(
-        address _owner,
         address _network,
-        
-        address _operatorRegistry,
-        address _vaultRegistry,
-
-        address _operatorNetOptin,
-        
+        address _vaultFactory,
+        address _operatorNetOptIn,
         uint48 _epochDuration,
         uint48 _slashingWindow
-    ) Ownable(_owner) {
+    ) Ownable(msg.sender) {
         if (_slashingWindow < _epochDuration) {
             revert SlashingWindowTooShort();
         }
 
         START_TIME = Time.timestamp();
         
+        NETWORK = _network;
+        
+        VAULT_FACTORY = _vaultFactory;
+        OPERATOR_NET_OPT_IN = _operatorNetOptIn;
+
         EPOCH_DURATION = _epochDuration;
         SLASHING_WINDOW = _slashingWindow;
 
-        NETWORK = _network;
-
-        OPERATOR_REGISTRY = _operatorRegistry;
-        VAULT_REGISTRY = _vaultRegistry;
-        OPERATOR_NET_OPTIN = _operatorNetOptin;
-
         subnetworksCnt = 1;
+    }
+
+    ///////////// Epoch management
+    function getCurrentEpoch() public view returns (uint48 epoch) {
+        return getEpochAtTs(Time.timestamp());
     }
 
     function getEpochStartTs(uint48 epoch) public view returns (uint48 timestamp) {
@@ -94,10 +96,6 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
 
     function getEpochAtTs(uint48 timestamp) public view returns (uint48 epoch) {
         return (timestamp - START_TIME) / EPOCH_DURATION;
-    }
-
-    function getCurrentEpoch() public view returns (uint48 epoch) {
-        return getEpochAtTs(Time.timestamp());
     }
 
     ///////////// Network management
@@ -116,29 +114,17 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     ///////////// Operator management
     function registerOperator(address operator, address operatingAddress) external onlyOwner {
         if (operators.contains(operator)) {
-            revert OperatorAlreadyRegistred();
+            revert OperatorAlreadyRegistered();
         }
 
-        if (!IRegistry(OPERATOR_REGISTRY).isEntity(operator)) {
-            revert NotOperator();
-        }
-
-        if (!IOptInService(OPERATOR_NET_OPTIN).isOptedIn(operator, NETWORK)) {
+        if (!IOptInService(OPERATOR_NET_OPT_IN).isOptedIn(operator, NETWORK)) {
             revert OperatorNotOptedIn();
         }
 
-        updateOperatingAddress(operator, operatingAddress);
+        _updateOperatingAddress(operator, operatingAddress);
 
         operators.add(operator);
         operators.enable(operator);
-    }
-
-    function updateOperatorOperatingAddress(address operator, address operatingAddress) external onlyOwner {
-        if (!operators.contains(operator)) {
-            revert OperatorNotRegistred();
-        }
-
-        updateOperatingAddress(operator, operatingAddress);
     }
 
     function pauseOperator(address operator) external onlyOwner {
@@ -153,20 +139,72 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         (, uint48 disabledTime) = operators.getTimes(operator);
 
         if (disabledTime == 0 || disabledTime + SLASHING_WINDOW > Time.timestamp()) {
-            revert OperarorGracePeriodNotPassed();
+            revert OperatorGracePeriodNotPassed();
         }
 
         operators.remove(operator);
     }
 
+    function updateOperatingAddress(address operator, address operatingAddress) external {
+        if (!operators.contains(operator)) {
+            revert OperatorNotRegistered();
+        }
+
+        require(operator == msg.sender, "Not authorized");
+
+        _updateOperatingAddress(operator, operatingAddress);
+    }
+
+    ///////////// Token management
+    function registerToken(address token) external onlyOwner {
+        if (tokens.contains(token)) {
+            revert TokenAlreadyRegistered();
+        }
+
+        tokens.add(token);
+        tokens.enable(token);
+    }
+
+    function pauseToken(address token) external onlyOwner {
+        tokens.disable(token);
+    }
+
+    function unpauseToken(address token) external onlyOwner {
+        tokens.enable(token);
+    }
+
+    function unregisterToken(address token) external onlyOwner {
+        (, uint48 disabledTime) = tokens.getTimes(token);
+
+        if (disabledTime == 0 || disabledTime + SLASHING_WINDOW > Time.timestamp()) {
+            revert TokenGracePeriodNotPassed();
+        }
+
+        tokens.remove(token);
+    }
+
+    function getTokenAddress(address collateralOrToken) public view returns (address) {
+        try ICollateral(collateralOrToken).asset() returns (address asset) {
+            return asset; 
+        } catch {
+            return collateralOrToken;
+        }
+    }
+
     ///////////// Vault management
     function registerVault(address vault) external onlyOwner {
         if (vaults.contains(vault)) {
-            revert VaultAlreadyRegistred();
+            revert VaultAlreadyRegistered();
         }
 
-        if (!IRegistry(VAULT_REGISTRY).isEntity(vault)) {
-            revert NotVault();
+        if (!IRegistry(VAULT_FACTORY).isEntity(vault)) {
+            revert VaultNotRegisteredInSymbiotic();
+        }
+
+        // TODO: check vault token
+        address token = getTokenAddress(IVault(vault).collateral());
+        if (!tokens.contains(token)) {
+            revert TokenNotWhitelisted();
         }
 
         uint48 vaultEpoch = IVault(vault).epochDuration();
@@ -202,13 +240,29 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         vaults.remove(vault);
     }
 
-    function isActiveVault(uint256 index) public view returns (bool) {
+    function isActiveVault(address vault) public view returns (bool) {
         uint48 epoch = getCurrentEpoch();
         uint48 epochStartTs = getEpochStartTs(epoch);
         
-        (, uint48 enabledTime, uint48 disabledTime) = vaults.atWithTimes(index);
+        (uint48 enabledTime, uint48 disabledTime) = vaults.getTimes(vault);
 
         return _wasActiveAt(enabledTime, disabledTime, epochStartTs);
+    }
+
+    ///////////// Stake management
+    function getTotalStake(uint48 epoch) public view returns (uint256) {
+        if (totalStakeCached[epoch]) {
+            return totalStakeCache[epoch];
+        }
+        return _calcTotalStake(epoch);
+    }
+
+    function getCurrentTotalStake() public view returns (uint256) {
+        return getTotalStake(getCurrentEpoch());
+    }
+
+    function getCurrentOperatorStake(address operator) public view returns (uint256) {
+        return getOperatorStake(operator, getCurrentEpoch());
     }
 
     function getOperatorStake(address operator, uint48 epoch) public view returns (uint256 stake) {
@@ -236,19 +290,17 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
 
         return stake;
     }
-
-    function getTotalStake(uint48 epoch) public view returns (uint256) {
-        if (totalStakeCached[epoch]) {
-            return totalStakeCache[epoch];
-        }
-        return _calcTotalStake(epoch);
-    }
     
-    function getValidatorSet(uint48 epoch) public view returns (ValidatorData[] memory validatorsData) {
+    function getCurrentOperatorInfos() public view returns (OperatorInfo[] memory operatorInfos) {
+        return getOperatorInfos(getCurrentEpoch());
+    }
+
+    function getOperatorInfos(uint48 epoch) public view returns (OperatorInfo[] memory operatorInfos) {
         uint48 epochStartTs = getEpochStartTs(epoch);
 
-        validatorsData = new ValidatorData[](operators.length());
-        uint256 valIdx = 0;
+        operatorInfos = new OperatorInfo[](operators.length());
+        
+        uint256 operatorIdx = 0;
 
         for (uint256 i; i < operators.length(); ++i) {
             (address operator, uint48 enabledTime, uint48 disabledTime) = operators.atWithTimes(i);
@@ -259,17 +311,40 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
             }
 
             address operatingAddress = getOperatorOperatingAddressAt(operator, epochStartTs);
-            if (operatingAddress == address(0)) {
-                continue;
-            }
-
             uint256 stake = getOperatorStake(operator, epochStartTs);
 
-            validatorsData[valIdx++] = ValidatorData(operatingAddress, stake);
+            operatorInfos[operatorIdx++] = OperatorInfo(operator, operatingAddress, stake);
         }
 
         assembly ("memory-safe") {
-            mstore(validatorsData, valIdx)
+            mstore(operatorInfos, operatorIdx)
+        }
+    }
+
+    function getCurrentVaults() public view returns (address[] memory) {
+        return getVaults(getCurrentEpoch());
+    }
+
+    function getVaults(uint48 epoch) public view returns (address[] memory) {
+        uint48 epochStartTs = getEpochStartTs(epoch);
+
+        address[] memory vaultAddresses = new address[](operators.length());
+        
+        uint256 vaultIdx = 0;
+
+        for (uint256 i; i < operators.length(); ++i) {
+            (address vault, uint48 enabledTime, uint48 disabledTime) = vaults.atWithTimes(i);
+
+            // just skip operator if it was added after the target epoch or paused
+            if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
+                continue;
+            }
+
+            vaultAddresses[vaultIdx++] = vault;
+        }
+
+        assembly ("memory-safe") {
+            mstore(vaultAddresses, vaultIdx)
         }
     }
 
@@ -279,7 +354,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         string calldata _rollupId,
         uint256 _blockNumber,
         bytes32 _blockCommitment // merkle root / block_commitment
-    ) public updateStakeCache(getCurrentEpoch()) {
+    ) public {
         require(_checkIncludingOperatingAddress() == true, "Operator is not registered");
 
         Task memory newTask;
@@ -299,35 +374,28 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     }
 
     function _checkIncludingOperatingAddress() internal returns (bool) {
-        return true;
-        // TODO:  check
-        // if (!operators.contains(msg.sender)) {
-        //     revert OperatorNotRegistred();
-        // }
+        if (!operators.contains(msg.sender)) {
+            revert OperatorNotRegistered();
+        }
 
-        // uint48 epoch = getCurrentEpoch();
-        // uint48 epochStartTs = getEpochStartTs(epoch);
+        uint48 epoch = getCurrentEpoch();
+        uint48 epochStartTs = getEpochStartTs(epoch);
 
-        // // for epoch older than SLASHING_WINDOW total stake can be invalidated (use cache)
-        // if (epochStartTs < Time.timestamp() - SLASHING_WINDOW) {
-        //     revert TooOldEpoch();
-        // }
-
-        // if (epochStartTs > Time.timestamp()) {
-        //     revert InvalidEpoch();
-        // }
+        if (epochStartTs > Time.timestamp()) {
+            revert InvalidEpoch();
+        }
         
-        // for (uint256 i; i < operators.length(); ++i) {
-        //     (address operator, uint48 enabledTime, uint48 disabledTime) = operators.atWithTimes(i);
+        for (uint256 i; i < operators.length(); ++i) {
+            (address operator, uint48 enabledTime, uint48 disabledTime) = operators.atWithTimes(i);
 
-        //     if (operator == msg.sender) {
-        //         // just skip operator if it was added after the target epoch or paused
-        //         if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
-        //             revert OperatorNotActive();
-        //         }
-        //         break;
-        //     }          
-        // }
+            if (operator == msg.sender) {
+                // just skip operator if it was added after the target epoch or paused
+                if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
+                    revert OperatorNotActive();
+                }
+                break;
+            }          
+        }
     }
 
     function respondToTask(
@@ -338,16 +406,14 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     ) external {
         require(_checkIncludingOperatingAddress() == true, "Operator is not registered");
         
-        // some logical checks
         require(
             rollupTaskInfos[rollupId].allTaskResponses[msg.sender][referenceTaskIndex] == false,
             "Operator has already responded to the task"
         );
 
-        // updating the storage with task responses
         rollupTaskInfos[rollupId].allTaskResponses[msg.sender][referenceTaskIndex] = response;
 
-        // TODO: We should give reward (Here) / Over Threshold
+        // TODO: We should give reward when Over Threshold
 
         // emitting event
         emit TaskResponded(clusterId, rollupId, referenceTaskIndex, response);

@@ -10,14 +10,14 @@ abstract contract OperatingAddressRegistry {
     error DuplicateOperatingAddress();
 
     mapping(address => Checkpoints.Trace208) private operatorToIdx;
-    mapping(address => address) private oeratingAddressToOperator;
+    mapping(address => address) private operatingAddressToOperator;
     mapping(uint208 => address) private idxToOperatingAddress;
     
     uint208 private totalOperatingAddressCount;
     uint208 internal constant EMPTY_OPERATING_ADDRESS_IDX = 0;
 
     function getOperatorByOperatingAddress(address operatingAddress) public view returns (address) {
-        return oeratingAddressToOperator[operatingAddress];
+        return operatingAddressToOperator[operatingAddress];
     }
 
     function getCurrentOperatorOperatingAddress(address operator) public view returns (address) {
@@ -40,14 +40,14 @@ abstract contract OperatingAddressRegistry {
         return idxToOperatingAddress[operatingAddressIdx];
     }
 
-    function updateOperatingAddress(address operator, address operatingAddress) internal {
-        if (oeratingAddressToOperator[operatingAddress] != address(0)) {
+    function _updateOperatingAddress(address operator, address operatingAddress) internal {
+        if (operatingAddressToOperator[operatingAddress] != address(0)) {
             revert DuplicateOperatingAddress();
         }
 
         uint208 newIdx = ++totalOperatingAddressCount;
         idxToOperatingAddress[newIdx] = operatingAddress;
         operatorToIdx[operator].push(Time.timestamp(), newIdx);
-        oeratingAddressToOperator[operatingAddress] = operator;
+        operatingAddressToOperator[operatingAddress] = operator;
     }
 }

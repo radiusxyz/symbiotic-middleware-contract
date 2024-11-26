@@ -2,23 +2,25 @@
 pragma solidity ^0.8.25;
 
 interface IValidationServiceManager {
-    error NotOperator();
-    error NotVault();
+    error VaultNotRegisteredInSymbiotic();
 
+    error OperatorNotRegistered();
     error OperatorNotActive();
     error OperatorNotOptedIn();
-    error OperatorNotRegistred();
-    error OperarorGracePeriodNotPassed();
-    error OperatorAlreadyRegistred();
+    error OperatorAlreadyRegistered();
+    error TokenAlreadyRegistered();
+    error TokenNotWhitelisted();
 
-    error VaultAlreadyRegistred();
+    error VaultAlreadyRegistered();
     error VaultEpochTooShort();
     error VaultGracePeriodNotPassed();
 
     error InvalidSubnetworksCnt();
-
-    error TooOldEpoch();
+    
     error InvalidEpoch();
+    error TooOldEpoch();
+    error OperatorGracePeriodNotPassed();
+    error TokenGracePeriodNotPassed();
 
     error SlashingWindowTooShort();
     error TooBigSlashAmount();
@@ -35,7 +37,8 @@ interface IValidationServiceManager {
         uint256 taskCreatedBlock;
     }
 
-    struct ValidatorData {
+    struct OperatorInfo {
+        address operatorAddress;
         address operatingAddress;
         uint256 stake;
     }

@@ -27,10 +27,8 @@ contract ValidationServiceManagerHoleskyDeployer is Script, Utils {
         uint48 minSlashingWindow = validationServiceManagerEpochDuration;
 
         ValidationServiceManager validationServiceManager = new ValidationServiceManager(
-            owner, 
             network, 
 
-            operatorRegistryAddress, 
             vaultFactoryAddress, 
             operatorNetworkOptInServiceAddress, 
 
