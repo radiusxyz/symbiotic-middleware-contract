@@ -249,6 +249,32 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         return _wasActiveAt(enabledTime, disabledTime, epochStartTs);
     }
 
+    function getCurrentVaults() public view returns (address[] memory) {
+        return getVaults(getCurrentEpoch());
+    }
+
+    function getVaults(uint48 epoch) public view returns (address[] memory) {
+        uint48 epochStartTs = getEpochStartTs(epoch);
+
+        uint256 vaultsCnt = vaults.length();
+        address[] memory vaultAddresses = new address[](vaultsCnt);
+        
+        uint256 vaultIdx = 0;
+
+        for (uint256 i; i < vaultsCnt; ++i) {
+            (address vault, uint48 enabledTime, uint48 disabledTime) = vaults.atWithTimes(i);
+
+            // just skip vault if it was added after the target epoch or paused
+            if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
+                continue;
+            }
+
+            vaultAddresses[vaultIdx++] = vault;
+        }
+
+        return vaultAddresses;
+    }
+
     ///////////// Stake management
     function getTotalStake(uint48 epoch) public view returns (uint256) {
         if (totalStakeCached[epoch]) {
@@ -318,33 +344,6 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
 
         assembly ("memory-safe") {
             mstore(operatorInfos, operatorIdx)
-        }
-    }
-
-    function getCurrentVaults() public view returns (address[] memory) {
-        return getVaults(getCurrentEpoch());
-    }
-
-    function getVaults(uint48 epoch) public view returns (address[] memory) {
-        uint48 epochStartTs = getEpochStartTs(epoch);
-
-        address[] memory vaultAddresses = new address[](operators.length());
-        
-        uint256 vaultIdx = 0;
-
-        for (uint256 i; i < operators.length(); ++i) {
-            (address vault, uint48 enabledTime, uint48 disabledTime) = vaults.atWithTimes(i);
-
-            // just skip operator if it was added after the target epoch or paused
-            if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
-                continue;
-            }
-
-            vaultAddresses[vaultIdx++] = vault;
-        }
-
-        assembly ("memory-safe") {
-            mstore(vaultAddresses, vaultIdx)
         }
     }
 
