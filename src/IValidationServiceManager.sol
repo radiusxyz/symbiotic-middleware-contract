@@ -37,9 +37,15 @@ interface IValidationServiceManager {
         uint256 taskCreatedBlock;
     }
 
+    struct TokenStake {
+        address token;
+        uint256 stake;
+    }
+
     struct OperatorInfo {
         address operatorAddress;
         address operatingAddress;
+        TokenStake[] stakes;
         uint256 stake;
     }
 
@@ -53,4 +59,14 @@ interface IValidationServiceManager {
 
     event NewTaskCreated(string clusterId, string rollupId, uint256 referenceTaskIndex, uint256 blockNumber, bytes32 blockCommitment, uint256 taskCreatedBlock);
     event TaskResponded(string clusterId, string rollupId, uint256 referenceTaskIndex, bool response);
+
+    event RegisterToken(address token);
+    event UnregisterToken(address token);
+
+    event RegisterVault(address vault);
+    event UnregisterVault(address vault);
+
+    event RegisterOperator(address operator, address operatingAddress);
+    event UpdateOperating(address operator, address operatingAddress);
+    event UnregisterOperator(address operator);    
 }
