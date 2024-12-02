@@ -9,7 +9,7 @@ ___DEPLOY___: ##
 build-contracts: ## builds all contracts
 	forge build
 
-deploy-all: deploy-symbiotic-core deploy-collateral deploy-vault deploy-operator-reward deploy-staker-reward deploy-validation-service-manager ## Deploy all contracts
+deploy-all: deploy-symbiotic-core deploy-collateral deploy-vault deploy-operator-reward deploy-staker-reward deploy-validation-service-manager deploy-liveness ## Deploy all contracts
 
 deploy-symbiotic-core: ## Deploy symbiotic core
 	./utils/deploy/01_deploy-symbiotic-core.sh
@@ -28,6 +28,9 @@ deploy-staker-reward: ## Deploy staker reward
 
 deploy-validation-service-manager: ## Deploy validation service manager (AVS)
 	./utils/deploy/06_deploy-validation-service-manager.sh
+
+deploy-liveness: ## Deploy liveness
+	./utils/deploy/07_deploy-liveness.sh
 
 ___START___: ## 
 
