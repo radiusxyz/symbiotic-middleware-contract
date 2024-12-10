@@ -53,7 +53,7 @@ interface ILivenessRadius {
     struct ValidationInfo {
         string platform;
         string serviceProvider;
-        address validation;
+        address validationServiceManager;
     }
 
     function initializeCluster(string calldata clusterId, uint256 maxSequencerNumber) external;
