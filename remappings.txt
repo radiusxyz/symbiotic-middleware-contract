@@ -8,5 +8,7 @@
 @symbiotic-rewards=lib/symbioticfi/rewards
 @symbioticfi/core=lib/symbioticfi/core
 
+src/=./src/
+
 permit2=lib/Uniswap/permit2
 forge-std/src=lib/foundry-rs/forge-std/src

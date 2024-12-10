@@ -269,3 +269,95 @@ cast call $VAULT_CONTRACT_ADDRESS --rpc-url $RPC_URL \
 ##################################################
 forge script script/deploy/VaultHoleskyDeploy.sol:VaultHoleskyDeploy --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY --broadcast -vvvv
 ##################################################
+
+
+########################################################################################
+# Rewards Test Commands
+# Sequence: addRewardConfig, Token Approve, depositRewards
+# Secondary Functions: addWhitelistedDepositor, Transfer token to secondary account, Token Approve, depositRewards
+# WIP: Emergency Withdrawal, Distribution
+
+
+# Query Token Balances
+cast call $TOKEN_CONTRACT_ADDRESS "balanceOf(address)(uint256)" $SECONDARY_ADDRESS
+cast call $TOKEN_CONTRACT_ADDRESS "balanceOf(address)(uint256)" $NETWORK_ADDRESS
+
+# Get reward pool balance
+cast call $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL \
+"getRewardPoolBalance(string,string)(uint256)" $CLUSTER_ID $ROLLUP_ID
+
+# Get claimable rewards
+cast call $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL \
+"getClaimableRewards(address,string,string)(uint256)" $OPERATOR_ADDRESS $CLUSTER_ID $ROLLUP_ID
+
+# Get reward config
+cast call $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL \
+"getRewardConfig(string,string)((address,uint256,uint256,uint256,uint256,uint256,bool))" $CLUSTER_ID $ROLLUP_ID
+
+# Get last reward snapshot
+cast call $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL \
+"getLastRewardSnapshot(string,string)((uint256,uint256,uint256))" $CLUSTER_ID $ROLLUP_ID
+
+# Get validation manager address
+cast call $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL \
+"validationManager()(address)"
+
+# Get liveness radius address
+cast call $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL \
+"livenessRadius()(address)"
+
+# Get whitelisted depositors
+cast call $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL \
+"getWhitelistedDepositors(string,string)(address[])" $CLUSTER_ID $ROLLUP_ID
+
+# Get reward config debug info
+cast call $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL \
+"getRewardConfigDebugInfo(string,string)(bool,address,uint256,uint256,uint256,uint256)" $CLUSTER_ID $ROLLUP_ID
+
+
+
+# Send Tokens to Secondary Account
+cast send --private-key $NETWORK_PRIVATE_KEY $TOKEN_CONTRACT_ADDRESS "transfer(address,uint256)" $SECONDARY_ADDRESS 10000
+
+# Token approval for deposits
+cast send $TOKEN_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+"approve(address,uint256)" $REWARD_SYSTEM_ADDRESS 100000
+
+cast send $TOKEN_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $SECONDARY_PRIVATE_KEY \
+"approve(address,uint256)" $REWARD_SYSTEM_ADDRESS 100000
+
+# Add reward config (owner only)
+cast send $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+"addRewardConfig(string,string,address,uint256,uint256,uint256)" $CLUSTER_ID $ROLLUP_ID $TOKEN_CONTRACT_ADDRESS $REWARD_RATE $MIN_STAKE_REQUIRED $DISTRIBUTION_INTERVAL
+
+# Update reward config (owner only)
+cast send $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+"updateRewardConfig(string,string,uint256,uint256)" $CLUSTER_ID $ROLLUP_ID $NEW_REWARD_RATE $NEW_MIN_STAKE
+
+# Add whitelisted depositor (whitelisted only)
+cast send $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+"addWhitelistedDepositor(string,string,address)" $CLUSTER_ID $ROLLUP_ID $SECONDARY_ADDRESS
+
+# Remove whitelisted depositor (whitelisted only)
+cast send $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+"removeWhitelistedDepositor(string,string,address)" $CLUSTER_ID $ROLLUP_ID $DEPOSITOR_TO_REMOVE
+
+# Deposit rewards (primary)
+cast send $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+"depositRewards(string,string,uint256)" $CLUSTER_ID $ROLLUP_ID 10000
+
+# Deposit rewards (secondary)
+cast send $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL --private-key $SECONDARY_PRIVATE_KEY \
+"depositRewards(string,string,uint256)" $CLUSTER_ID $ROLLUP_ID 10000
+
+# Distribute rewards
+cast send $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+"distributeRewards(string,string)" $CLUSTER_ID $ROLLUP_ID
+
+# Claim rewards
+cast send $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+"claimRewards(string,string)" $CLUSTER_ID $ROLLUP_ID
+
+# Emergency withdraw (whitelisted only)
+cast send $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+"emergencyWithdrawRollup(string,string,uint256)" $CLUSTER_ID $ROLLUP_ID $AMOUNT

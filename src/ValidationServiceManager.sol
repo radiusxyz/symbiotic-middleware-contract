@@ -197,6 +197,11 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         emit UnregisterToken(token);
     }
 
+    // Check if Token is Registered [Whitelisted]
+    function isRegisteredToken(address token) public view returns (bool) {
+        return tokens.contains(token);
+    }
+
     function getTokenAddress(address collateralOrToken) public view returns (address) {
         try ICollateral(collateralOrToken).asset() returns (address asset) {
             return asset; 

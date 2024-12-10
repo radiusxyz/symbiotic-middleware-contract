@@ -16,6 +16,8 @@ contract Utils is Script {
     string public validationServiceManagerDeploymentOutput = "validation_service_manager_deployment_output";
     string public livenessRadiusDeploymentOutput = "liveness_radius_deployment_output";
 
+    string constant rewardSystemDeploymentOutput = "rewardSystem.deployment";
+
     // Related to CollateralDeploy
     uint256 public initialSupply = 1000000000000000000000000000;
     uint256 public initialLimit = 1000000000000000000000000000;
