@@ -585,9 +585,10 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
                 if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
                     revert OperatorNotActive();
                 }
-                break;
+                return true;
             }          
         }
+        return false;
     }
 
     function _calcTotalStake(uint48 epoch) private view returns (uint256 totalStake) {

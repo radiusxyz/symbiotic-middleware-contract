@@ -22,16 +22,16 @@ contract CollateralHoleskyDeploy is Script, Utils {
         
         address limitIncreaser = address(deployer);
 
-        uint256 initialSupply = 1000000000000000000000000000;
+        uint256 initialSupply = vm.envUint("INITIAL_SUPPLY");
 
         RadiusTestERC20 radiusTestERC20 = new RadiusTestERC20(initialSupply);
-        console2.log("radiusTestERC20: ", address(radiusTestERC20));
+        console2.log("TEST_TOKEN_CONTRACT_ADDRESS=", address(radiusTestERC20));
 
         DefaultCollateralFactory defaultCollateralFactory = new DefaultCollateralFactory();
-        console2.log("defaultCollateralFactory: ", address(defaultCollateralFactory));
+        console2.log("DEFAULT_COLLATERAL_FACTORY=", address(defaultCollateralFactory));
 
         address defaultCollateral = defaultCollateralFactory.create(address(radiusTestERC20), initialLimit, limitIncreaser);
-        console2.log("defaultCollateral: ", address(defaultCollateral));
+        console2.log("DEFAULT_COLLATERAL=", address(defaultCollateral));
 
         vm.stopBroadcast();
     }

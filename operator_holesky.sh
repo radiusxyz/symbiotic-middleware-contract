@@ -1,0 +1,85 @@
+RPC_URL="https://ethereum-holesky-rpc.publicnode.com"
+
+# Rollup side 
+NETWORK_ADDRESS="0x96C969D31b4fa8A93a081aCB1271D13fb157bd1e"
+NETWORK_PRIVATE_KEY="0x2141478fe814f58de31b5a6fb2a7682b7dae755cc19bab6acdbfa1fcfe6e64e1"
+
+####### Symbiotic (holesky) 
+OPERATOR_REGISTRY_CONTRACT_ADDRESS="0x6F75a4ffF97326A00e52662d82EA4FdE86a2C548"
+OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS="0x58973d16FFA900D11fC22e5e2B6840d9f7e13401"
+OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS="0x95CC0a052ae33941877c9619835A233D21D57351"
+#######
+
+####### Vault
+VAULT_CONTRACT_ADDRESS="0xe4618F28D3C64f147081ab31055a45FA1D7A754f"
+#######
+
+####### Radius
+LIVENESS_CONTRACT_ADDRESS="0x56198a0d8B9DB4b663CED311A71584e39f640985"
+#######
+
+####### Rollup
+VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS="0xdb816634A4E238fC5240fB78d5181b11f57D9DDd"
+#######
+
+####### Operator
+# OPERATOR_ADDRESS="0x96C969D31b4fa8A93a081aCB1271D13fb157bd1e"
+# OPERATOR_PRIVATE_KEY="0x2141478fe814f58de31b5a6fb2a7682b7dae755cc19bab6acdbfa1fcfe6e64e1"
+# OPERATING_ADDRESS="0x96C969D31b4fa8A93a081aCB1271D13fb157bd1e"
+# OPERATING_PRIVATE_KEY="0x2141478fe814f58de31b5a6fb2a7682b7dae755cc19bab6acdbfa1fcfe6e64e1"
+
+OPERATOR_ADDRESS="0xef0A6084c6b0c21f09E7E3c8Fe56466B96E9dFFC"
+OPERATOR_PRIVATE_KEY="0xabe756f4bc9ad050f245c3feb5f59b8636080003a205ebe3b661255a0feac684"
+OPERATING_ADDRESS="0xef0A6084c6b0c21f09E7E3c8Fe56466B96E9dFFC"
+OPERATING_PRIVATE_KEY="0xabe756f4bc9ad050f245c3feb5f59b8636080003a205ebe3b661255a0feac684"
+
+# OPERATOR_ADDRESS="0x4eFD3aE99ac12829A391e4cdD609D7389DCD7E96"
+# OPERATOR_PRIVATE_KEY="0x426b32ddfedee270f855555147f7a42ee7a3b8b606ad9efca61f8733fe579734"
+# OPERATING_ADDRESS="0x4eFD3aE99ac12829A391e4cdD609D7389DCD7E96"
+# OPERATING_PRIVATE_KEY="0x426b32ddfedee270f855555147f7a42ee7a3b8b606ad9efca61f8733fe579734"
+
+# OPERATOR_ADDRESS="0x65c73C1a165f0fcFBD0DcAF60a02E5bD59F7faf3"
+# OPERATOR_PRIVATE_KEY="0x42f1bfd88712d4c6e18fdaa2fbc75509ca47ea26ff076c53010105e7d82be97a"
+# OPERATING_ADDRESS="0x65c73C1a165f0fcFBD0DcAF60a02E5bD59F7faf3"
+# OPERATING_PRIVATE_KEY="0x42f1bfd88712d4c6e18fdaa2fbc75509ca47ea26ff076c53010105e7d82be97a"
+#######
+
+# Operator register 확인
+cast call $OPERATOR_REGISTRY_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+"isEntity(address who)(bool)" $OPERATOR_ADDRESS
+#####################
+cast send $OPERATOR_REGISTRY_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
+"registerOperator()"
+#####################
+
+# Operator가 network에 Optin 되었는지 확인
+cast call $OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+"isOptedIn(address who, address where)(bool)" $OPERATOR_ADDRESS $NETWORK_ADDRESS
+#####################
+cast send $OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
+"optIn(address network)" $NETWORK_ADDRESS
+#####################
+
+# Operator가 vault에 Optin 되었는지 확인
+cast call $OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+"isOptedIn(address who, address where)(bool)" $OPERATOR_ADDRESS $VAULT_CONTRACT_ADDRESS
+#####################
+cast send $OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
+"optIn(address vault)" $VAULT_CONTRACT_ADDRESS
+#####################
+
+# Operator가 register 되었는지 확인
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+"getCurrentOperatorInfos()((address, address, (address, uint256)[], uint256)[])"
+#####################
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+"registerOperator(address operatorAddress, address operatingAddress)" $OPERATOR_ADDRESS $OPERATING_ADDRESS
+#####################
+
+# registerSequencer (14번)
+cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+"getSequencerList(string clusterId)(address[] memory)" $CLUSTER_ID
+#####################
+cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATING_PRIVATE_KEY \
+"registerSequencer(string clusterId)" $CLUSTER_ID
+#####################

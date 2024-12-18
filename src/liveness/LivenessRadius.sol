@@ -90,6 +90,11 @@ contract LivenessRadius is
             "Not rollup owner"
         );
 
+        require(
+            !rollup.isRegisteredExecutor[executorAddress],
+            "Already registered executor"
+        );
+
         rollup.isRegisteredExecutor[executorAddress] = true;
         rollup.executorAddresses.push(executorAddress);
 
