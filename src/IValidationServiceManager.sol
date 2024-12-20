@@ -69,4 +69,12 @@ interface IValidationServiceManager {
     event RegisterOperator(address operator, address operatingAddress);
     event UpdateOperating(address operator, address operatingAddress);
     event UnregisterOperator(address operator);    
+
+    event RewardsDistributed(
+        string clusterId,
+        string rollupId,
+        uint256 operatorAmount,
+        uint256 stakerAmount,
+        bytes32 operatorMerkleRoot
+    );
 }

@@ -17,18 +17,42 @@ contract ValidationServiceManagerDeployer is Script, Utils {
 
         (,, address owner) = vm.readCallers();
 
-        string memory output1 = readOutput(symbioticCoreDeploymentOutput);
-        address operatorRegistryAddress = convertAddress(vm.parseJson(output1, ".addresses.operatorRegistry"));
-        address vaultFactoryAddress = convertAddress(vm.parseJson(output1, ".addresses.vaultFactory"));
-        address operatorNetworkOptInServiceAddress = convertAddress(vm.parseJson(output1, ".addresses.operatorNetworkOptInService"));
+        string memory symbioticCoreDeploymentOutput = readOutput(symbioticCoreDeploymentOutput);
+        address operatorRegistryAddress = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.operatorRegistry"));
+        address vaultFactoryAddress = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.vaultFactory"));
+        address operatorNetworkOptInServiceAddress = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.operatorNetworkOptInService"));
+
+         string memory operatorRewardOutput = readOutput(
+            operatorRewardDeploymentOutput
+        );
+        string memory stakerRewardOutput = readOutput(
+            stakerRewardDeploymentOutput
+        );
+
+         string memory rewardManagerOutput = readOutput(
+            rewardsManagerDeploymentOutput
+        );
+
+        address stakerRewardAddress = convertAddress(
+            vm.parseJson(stakerRewardOutput, ".addresses.stakerReward")
+        );
+        address operatorRewardAddress = convertAddress(
+            vm.parseJson(operatorRewardOutput, ".addresses.operatorReward")
+        );
+
+         address rewardManagerAddress = convertAddress(
+            vm.parseJson(rewardManagerOutput, ".addresses.rewardsManager")
+        );
 
         ValidationServiceManager validationServiceManager = new ValidationServiceManager(
             network, 
             vaultFactoryAddress, 
             operatorNetworkOptInServiceAddress, 
-
             validationServiceManagerEpochDuration, 
-            minSlashingWindow
+            minSlashingWindow,
+            stakerRewardAddress,
+            operatorRewardAddress,
+            rewardManagerAddress
         );
 
         string memory deployedContractAddresses_output = vm.serializeAddress(

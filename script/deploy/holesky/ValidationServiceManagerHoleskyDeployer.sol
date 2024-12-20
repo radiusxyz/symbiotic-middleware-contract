@@ -26,6 +26,11 @@ contract ValidationServiceManagerHoleskyDeployer is Script, Utils {
         uint48 validationServiceManagerEpochDuration = 12;
         uint48 minSlashingWindow = validationServiceManagerEpochDuration;
 
+
+         address stakerRewardAddress = address(0x0000000000000000000000000000000000000000);
+        address operatorRewardAddress = address(0x0000000000000000000000000000000000000000);
+        address rewardManagerAddress = address(0x0000000000000000000000000000000000000000);
+
         ValidationServiceManager validationServiceManager = new ValidationServiceManager(
             network, 
 
@@ -33,7 +38,10 @@ contract ValidationServiceManagerHoleskyDeployer is Script, Utils {
             operatorNetworkOptInServiceAddress, 
 
             validationServiceManagerEpochDuration, 
-            minSlashingWindow
+            minSlashingWindow,
+            stakerRewardAddress,
+            operatorRewardAddress,
+            rewardManagerAddress
         );
 
         console2.log("validationServiceManager: ", address(validationServiceManager));

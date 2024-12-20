@@ -3,33 +3,48 @@ pragma solidity 0.8.25;
 
 import {Utils} from "../utils/Utils.sol";
 import {Script} from "forge-std/src/Script.sol";
-import {RewardSystem} from "../../src/RewardSystem.sol";
+import {RewardsManager} from "../../src/rewards/RewardsManager.sol";
 import {ValidationServiceManager} from "../../src/ValidationServiceManager.sol";
 
 contract RewardDeploy is Script, Utils {
     function run() external {
         vm.startBroadcast();
 
-        string memory output1 = readOutput(
-            validationServiceManagerDeploymentOutput
-        );
-        string memory output2 = readOutput(livenessRadiusDeploymentOutput);
-        address validationManagerAddress = convertAddress(
-            vm.parseJson(output1, ".addresses.validationServiceManager")
-        );
-        address livenessRadiusAddress = convertAddress(
-            vm.parseJson(output2, ".addresses.livenessRadius")
-        );
+        // string memory livenessRadiusOutput = readOutput(
+        //     livenessRadiusDeploymentOutput
+        // );
+        // string memory operatorRewardOutput = readOutput(
+        //     operatorRewardDeploymentOutput
+        // );
+        // string memory stakerRewardOutput = readOutput(
+        //     stakerRewardDeploymentOutput
+        // );
 
-        RewardSystem rewardSystem = new RewardSystem(
-            validationManagerAddress,
-            livenessRadiusAddress
+        string memory symbioticCoreDeploymentOutput = readOutput(symbioticCoreDeploymentOutput);
+
+        address networkMiddlewareServiceAddress = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.networkMiddlewareService"));
+
+
+    
+        // address livenessRadiusAddress = convertAddress(
+        //     vm.parseJson(livenessRadiusOutput, ".addresses.livenessRadius")
+        // );
+
+        // address stakerRewardAddress = convertAddress(
+        //     vm.parseJson(stakerRewardOutput, ".addresses.stakerReward")
+        // );
+        // address operatorRewardAddress = convertAddress(
+        //     vm.parseJson(operatorRewardOutput, ".addresses.operatorReward")
+        // );
+
+        RewardsManager rewardsManager = new RewardsManager(
+            networkMiddlewareServiceAddress
         );
 
         string memory deployedContractAddresses_output = vm.serializeAddress(
             deployedContractAddresses,
-            "rewardSystem",
-            address(rewardSystem)
+            "rewardsManager",
+            address(rewardsManager)
         );
 
         string memory finalJson = vm.serializeString(
@@ -38,7 +53,7 @@ contract RewardDeploy is Script, Utils {
             deployedContractAddresses_output
         );
 
-        writeOutput(finalJson, rewardSystemDeploymentOutput);
+        writeOutput(finalJson, rewardsManagerDeploymentOutput);
 
         vm.stopBroadcast();
     }

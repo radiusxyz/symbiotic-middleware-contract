@@ -1,7 +1,0 @@
-{
-  "addresses": {
-    "defaultCollateral": "0x0665FbB86a3acECa91Df68388EC4BBE11556DDce",
-    "defaultCollateralFactory": "0x4ed7c70F96B99c776995fB64377f0d4aB3B0e1C1",
-    "radiusTestERC20": "0x59b670e9fA9D0A427751Af201D676719a970857b"
-  }
-}
