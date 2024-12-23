@@ -1,6 +1,6 @@
 #!/bin/bash
 SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-source $SCRIPT_PATH/env.sh
+source $SCRIPT_PATH/../../env.sh
 
 cast send $TOKEN_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
 "approve(address spender, uint256 value)(bool)" $COLLATERAL_CONTRACT_ADDRESS $DEPOSIT_AMOUNT

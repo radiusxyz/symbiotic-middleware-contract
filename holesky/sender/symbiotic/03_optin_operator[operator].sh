@@ -1,6 +1,6 @@
 #!/bin/bash
 SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-source $SCRIPT_PATH/env.sh
+source $SCRIPT_PATH/../../env.sh
 
 result=$(cast call $OPERATOR_REGISTRY_CONTRACT_ADDRESS --rpc-url $RPC_URL \
 "isEntity(address who)(bool)" $OPERATOR_ADDRESS)

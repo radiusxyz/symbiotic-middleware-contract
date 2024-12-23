@@ -197,6 +197,41 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         emit UnregisterToken(token);
     }
 
+    function isActiveToken(address token) public view returns (bool) {
+        uint48 epoch = getCurrentEpoch();
+        uint48 epochStartTs = getEpochStartTs(epoch);
+        
+        (uint48 enabledTime, uint48 disabledTime) = tokens.getTimes(token);
+
+        return _wasActiveAt(enabledTime, disabledTime, epochStartTs);
+    }
+
+    function getCurrentTokens() public view returns (address[] memory) {
+        return getTokens(getCurrentEpoch());
+    }
+
+    function getTokens(uint48 epoch) public view returns (address[] memory) {
+        uint48 epochStartTs = getEpochStartTs(epoch);
+
+        uint256 tokensCnt = tokens.length();
+        address[] memory tokenAddresses = new address[](tokensCnt);
+        
+        uint256 tokenIdx = 0;
+
+        for (uint256 i; i < tokensCnt; ++i) {
+            (address token, uint48 enabledTime, uint48 disabledTime) = tokens.atWithTimes(i);
+
+            // just skip token if it was added after the target epoch or paused
+            if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
+                continue;
+            }
+
+            tokenAddresses[tokenIdx++] = token;
+        }
+
+        return tokenAddresses;
+    }
+
     function getTokenAddress(address collateralOrToken) public view returns (address) {
         try ICollateral(collateralOrToken).asset() returns (address asset) {
             return asset; 
