@@ -12,7 +12,6 @@ import {IRewardsManager} from "./interfaces/IRewardsManager.sol";
 import {IValidationServiceManager} from "../IValidationServiceManager.sol";
 import {INetworkMiddlewareService} from "@symbiotic-core/src/interfaces/service/INetworkMiddlewareService.sol";
 
-
 /**
  * @title RewardsManager
  * @notice Manages reward pools and approvals for the ValidationServiceManager
@@ -24,6 +23,12 @@ contract RewardsManager is IRewardsManager, Ownable, ReentrancyGuard, Pausable {
     // Constants
     uint256 private constant MIN_DISTRIBUTION_INTERVAL = 10;
     uint256 private constant MAX_WHITELISTED_DEPOSITORS = 10;
+    uint256 private constant POOL_MULTIPLIER = 5;
+    uint256 private constant MAX_DISTRIBUTION_INTERVAL = 30 days;
+    uint256 private constant MIN_REWARD_AMOUNT = 1e18;
+    uint256 private constant MAX_REWARD_AMOUNT = 1000e18;
+    uint256 private constant MAX_STRING_LENGTH = 32;
+    uint256 private constant MIN_RATIO = 5; // 5% minimum for each staker/operator rewards
 
     // Immutable state variables
     address public immutable NETWORK_MIDDLEWARE_SERVICE;
@@ -34,115 +39,124 @@ contract RewardsManager is IRewardsManager, Ownable, ReentrancyGuard, Pausable {
     mapping(bytes32 => address[]) public whitelistedDepositorList;
     mapping(bytes32 => mapping(address => bool)) public isWhitelistedDepositor;
 
-    constructor(
-        address _networkMiddlewareService
-    ) Ownable(msg.sender) {
-        require(_networkMiddlewareService != address(0), "Invalid network middleware service address");
-
+    constructor(address _networkMiddlewareService) Ownable(msg.sender) {
+        if (_networkMiddlewareService == address(0)) revert InvalidNetworkMiddleware(_networkMiddlewareService);
         NETWORK_MIDDLEWARE_SERVICE = _networkMiddlewareService;
     }
 
-    function _getRewardKey(string calldata clusterId, string calldata rollupId) internal pure returns (bytes32) {
+    function _validateString(string calldata str) internal pure {
+        uint256 length = bytes(str).length;
+        if (length == 0 || length > MAX_STRING_LENGTH) {
+            revert StringInvalid(length, MAX_STRING_LENGTH);
+        }
+    }
+
+
+    function _getRewardKey(
+        string calldata clusterId,
+        string calldata rollupId
+    ) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(clusterId, rollupId));
     }
 
     function approveRewardDistribution(
-    address network,
-    string calldata clusterId,
-    string calldata rollupId,
-    uint256 amount
-) external nonReentrant whenNotPaused returns (uint256) {
-    console.log("approveRewardDistribution called with:");
-    console.log("network:", network);
-    console.log("clusterId:", clusterId);
-    console.log("rollupId:", rollupId);
-    console.log("amount:", amount);
-    console.log("msg.sender:", msg.sender);
+        address network,
+        string calldata clusterId,
+        string calldata rollupId
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        _validateString(clusterId);
+        _validateString(rollupId);
 
-    address middleware = INetworkMiddlewareService(NETWORK_MIDDLEWARE_SERVICE).middleware(network);
-    console.log("Expected middleware:", middleware);
-        console.log("NETWORK_MIDDLEWARE_SERVICE:", NETWORK_MIDDLEWARE_SERVICE);
+        address middleware = INetworkMiddlewareService(
+            NETWORK_MIDDLEWARE_SERVICE
+        ).middleware(network);
+        if (middleware != msg.sender)
+            revert InvalidMiddleware(msg.sender, middleware);
 
-    
-    require(middleware == msg.sender, "Not Network Middleware");
-    console.log("Middleware check passed");
+        bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
+        RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
 
-    bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
+        if (!config.isActive) revert ConfigNotActive();
+        if (
+            block.timestamp <
+            config.lastDistribution + config.distributionInterval
+        ) revert TooEarlyForDistribution();
 
-    RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
-    console.log("Config active status:", config.isActive);
-    console.log("Config lastDistribution:", config.lastDistribution);
-    console.log("Config distributionInterval:", config.distributionInterval);
-    console.log("Config minPoolBalance:", config.minPoolBalance);
-    
-    require(config.isActive, "Config not active");
-    console.log("Active check passed");
-    
-    console.log("Current timestamp:", block.timestamp);
-    console.log("Next allowed distribution:", config.lastDistribution + config.distributionInterval);
-    require(block.timestamp >= config.lastDistribution + config.distributionInterval, "Too early");
-    console.log("Time check passed");
+        uint256 currentPoolBalance = rewardPools[rewardKey];
+        if (currentPoolBalance < config.amountPerInterval)
+            revert InsufficientPoolBalance(
+                currentPoolBalance,
+                config.amountPerInterval
+            );
 
-    uint256 currentPoolBalance = rewardPools[rewardKey];
-    console.log("Current pool balance:", currentPoolBalance);
-    require(currentPoolBalance >= config.minPoolBalance, "Insufficient pool balance");
-    console.log("Balance check passed");
-    
-    uint256 availableAmount = Math.min(amount, currentPoolBalance);
-    console.log("Calculated available amount:", availableAmount);
-    require(availableAmount > 0, "No rewards available");
-    console.log("Amount check passed");
+        // Update state
+        rewardPools[rewardKey] -= config.amountPerInterval;
+        config.lastDistribution = block.timestamp;
 
-    // Update state
-    rewardPools[rewardKey] -= availableAmount;
-    config.lastDistribution = block.timestamp;
-    console.log("State updated");
-    console.log("New pool balance:", rewardPools[rewardKey]);
-    console.log("New lastDistribution:", config.lastDistribution);
+        // Use safeIncreaseAllowance
+        IERC20(config.rewardToken).safeIncreaseAllowance(
+            msg.sender,
+            config.amountPerInterval
+        );
 
-    // Approve exact amount
-    address rewardToken = config.rewardToken;
-    console.log("Reward token address:", rewardToken);
-    console.log("Approving amount:", availableAmount);
-    IERC20(rewardToken).approve(msg.sender, availableAmount);
-    console.log("Approval complete");
+        emit RewardDistributionApproved(
+            clusterId,
+            rollupId,
+            config.amountPerInterval,
+            block.timestamp
+        );
 
-    emit RewardDistributionApproved(clusterId, rollupId, availableAmount, block.timestamp);
-    console.log("Event emitted");
-    
-    return availableAmount;
-}
+        return config.amountPerInterval;
+    }
 
     function getDistributionInfo(
         string calldata clusterId,
         string calldata rollupId
-    ) external view returns (
-        bool isEligible,
-        uint256 availableAmount,
-        address rewardToken,
-        uint256 timeUntilNextDistribution
-    ) {
+    )
+        external
+        view
+        returns (
+            bool isEligible,
+            uint256 availableAmount,
+            address rewardToken,
+            uint256 timeUntilNextDistribution,
+            uint256 operatorAmount,
+            uint256 stakerAmount
+        )
+    {
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
         RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
-        
+
         if (!config.isActive) {
-            return (false, 0, address(0), 0);
+            return (false, 0, address(0), 0, 0, 0);
         }
 
-        uint256 nextDistribution = config.lastDistribution + config.distributionInterval;
+        uint256 nextDistribution = config.lastDistribution +
+            config.distributionInterval;
         uint256 poolBalance = rewardPools[rewardKey];
 
-        isEligible = block.timestamp >= nextDistribution && 
-                     poolBalance >= config.minPoolBalance;
-                     
-        timeUntilNextDistribution = block.timestamp >= nextDistribution ? 
-                                   0 : nextDistribution - block.timestamp;
+        isEligible =
+            block.timestamp >= nextDistribution &&
+            poolBalance >= config.amountPerInterval;
+
+        timeUntilNextDistribution = block.timestamp >= nextDistribution
+            ? 0
+            : nextDistribution - block.timestamp;
+
+        operatorAmount =
+            (config.amountPerInterval * config.operatorRewardRatio) /
+            100;
+        stakerAmount =
+            (config.amountPerInterval * config.stakerRewardRatio) /
+            100;
 
         return (
             isEligible,
-            poolBalance,
+            config.amountPerInterval,
             config.rewardToken,
-            timeUntilNextDistribution
+            timeUntilNextDistribution,
+            operatorAmount,
+            stakerAmount
         );
     }
 
@@ -150,28 +164,52 @@ contract RewardsManager is IRewardsManager, Ownable, ReentrancyGuard, Pausable {
         string calldata clusterId,
         string calldata rollupId,
         address rewardToken,
-        uint256 minPoolBalance,
-        uint256 distributionInterval
+        uint256 amountPerInterval,
+        uint256 distributionInterval,
+        uint256 operatorRewardRatio,
+        uint256 stakerRewardRatio
     ) external whenNotPaused {
-        require(minPoolBalance > 0, "Invalid minimum balance");
-        require(rewardToken != address(0), "Invalid reward token");
-        require(distributionInterval >= MIN_DISTRIBUTION_INTERVAL, "Interval too short");
+        _validateString(clusterId);
+        _validateString(rollupId);
+
+        if (amountPerInterval < MIN_REWARD_AMOUNT)
+            revert AmountTooLow(amountPerInterval, MIN_REWARD_AMOUNT);
+        if (amountPerInterval > MAX_REWARD_AMOUNT)
+            revert AmountTooHigh(amountPerInterval, MAX_REWARD_AMOUNT);
+        if (rewardToken == address(0)) revert ZeroAddress();
+        if (distributionInterval < MIN_DISTRIBUTION_INTERVAL)
+            revert IntervalTooShort(
+                distributionInterval,
+                MIN_DISTRIBUTION_INTERVAL
+            );
+        if (distributionInterval > MAX_DISTRIBUTION_INTERVAL)
+            revert IntervalTooLong(
+                distributionInterval,
+                MAX_DISTRIBUTION_INTERVAL
+            );
+        if (operatorRewardRatio < MIN_RATIO || operatorRewardRatio > 95)
+            revert InvalidRatio(operatorRewardRatio, MIN_RATIO, 95);
+        if (stakerRewardRatio < MIN_RATIO || stakerRewardRatio > 95)
+            revert InvalidRatio(stakerRewardRatio, MIN_RATIO, 95);
+        if (operatorRewardRatio + stakerRewardRatio != 100)
+            revert RatioSumInvalid(operatorRewardRatio + stakerRewardRatio);
 
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
-        if(rewardPoolConfigs[rewardKey].isActive) {
-            revert("Config exists");
+        if (rewardPoolConfigs[rewardKey].isActive) {
+            revert ConfigExists();
         }
 
-        try IERC20(rewardToken).totalSupply() returns (uint256) {
-        } catch {
-            revert("Invalid ERC20 token");
+        try IERC20(rewardToken).totalSupply() returns (uint256) {} catch {
+            revert InvalidERC20Token(rewardToken);
         }
 
         rewardPoolConfigs[rewardKey] = RewardPoolConfig({
             rewardToken: rewardToken,
-            minPoolBalance: minPoolBalance,
+            amountPerInterval: amountPerInterval,
             distributionInterval: distributionInterval,
             lastDistribution: block.timestamp,
+            operatorRewardRatio: operatorRewardRatio,
+            stakerRewardRatio: stakerRewardRatio,
             isActive: true
         });
 
@@ -185,22 +223,31 @@ contract RewardsManager is IRewardsManager, Ownable, ReentrancyGuard, Pausable {
         string calldata clusterId,
         string calldata rollupId,
         uint256 newDistributionInterval,
-        uint256 newMinPoolBalance
-    ) external  whenNotPaused {
+        uint256 newAmountPerInterval,
+        uint256 newOperatorRewardRatio,
+        uint256 newStakerRewardRatio
+    ) external whenNotPaused {
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
         RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
-        require(config.isActive, "Config not active");
-        require(newMinPoolBalance > 0, "Invalid minimum balance");
-        require(newDistributionInterval >= MIN_DISTRIBUTION_INTERVAL, "Invalid interval");
+        if (!config.isActive) revert ConfigNotActive();
+        if (newAmountPerInterval == 0) revert InvalidNewAmountPerInterval();
+        if (newDistributionInterval < MIN_DISTRIBUTION_INTERVAL) 
+            revert InvalidNewDistributionInterval(newDistributionInterval, MIN_DISTRIBUTION_INTERVAL);
+        if (newOperatorRewardRatio + newStakerRewardRatio != 100) 
+            revert InvalidNewRewardRatios(newOperatorRewardRatio, newStakerRewardRatio);
 
         config.distributionInterval = newDistributionInterval;
-        config.minPoolBalance = newMinPoolBalance;
+        config.amountPerInterval = newAmountPerInterval;
+        config.operatorRewardRatio = newOperatorRewardRatio;
+        config.stakerRewardRatio = newStakerRewardRatio;
 
         emit RewardPoolConfigUpdated(
-            clusterId, 
+            clusterId,
             rollupId,
             newDistributionInterval,
-            newMinPoolBalance
+            newAmountPerInterval,
+            newOperatorRewardRatio,
+            newStakerRewardRatio
         );
     }
 
@@ -209,20 +256,36 @@ contract RewardsManager is IRewardsManager, Ownable, ReentrancyGuard, Pausable {
         string calldata rollupId,
         uint256 amount
     ) external nonReentrant whenNotPaused {
+        _validateString(clusterId);
+        _validateString(rollupId);
+
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
-        require(isWhitelistedDepositor[rewardKey][msg.sender], "Not authorized");
-        
+        if (!isWhitelistedDepositor[rewardKey][msg.sender])
+            revert NotAuthorizedDepositor();
+
         RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
-        require(config.isActive, "Config not active");
-        require(rewardPools[rewardKey] + amount >= config.minPoolBalance, "Insufficient deposit");
+        if (!config.isActive) revert ConfigNotActive();
+
+        uint256 minimumRequired = config.amountPerInterval * POOL_MULTIPLIER;
+
+        uint256 newBalance = rewardPools[rewardKey] + amount;
+        if (newBalance < rewardPools[rewardKey]) revert OverflowDetected();
+        if (newBalance < minimumRequired)
+            revert InsufficientPoolBalance(newBalance, minimumRequired);
 
         IERC20 token = IERC20(config.rewardToken);
-        require(token.balanceOf(msg.sender) >= amount, "Insufficient balance");
-        
-        token.safeTransferFrom(msg.sender, address(this), amount);
-        rewardPools[rewardKey] += amount;
+        if (token.balanceOf(msg.sender) < amount) revert InsufficientBalance();
 
-        emit RewardsDeposited(clusterId, rollupId, msg.sender, amount, rewardPools[rewardKey]);
+        token.safeTransferFrom(msg.sender, address(this), amount);
+        rewardPools[rewardKey] = newBalance;
+
+        emit RewardsDeposited(
+            clusterId,
+            rollupId,
+            msg.sender,
+            amount,
+            newBalance
+        );
     }
 
     function emergencyWithdraw(
@@ -230,16 +293,28 @@ contract RewardsManager is IRewardsManager, Ownable, ReentrancyGuard, Pausable {
         string calldata rollupId,
         uint256 amount
     ) external onlyOwner nonReentrant whenNotPaused {
+        _validateString(clusterId);
+        _validateString(rollupId);
+
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
         RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
-        require(config.isActive, "Config not active");
-        require(amount > 0 && amount <= rewardPools[rewardKey], "Invalid amount");
+        if (!config.isActive) revert ConfigNotActive();
 
-        uint256 remainingBalance = rewardPools[rewardKey] - amount;
-        require(remainingBalance >= config.minPoolBalance, "Below min balance");
+        uint256 currentBalance = rewardPools[rewardKey];
+        if (amount == 0 || amount > currentBalance)
+            revert InvalidAmount(amount, currentBalance);
 
-        rewardPools[rewardKey] = remainingBalance;
-        
+        uint256 minimumRequired = config.amountPerInterval *
+            POOL_MULTIPLIER *
+            2;
+        uint256 maxWithdrawal = currentBalance > minimumRequired
+            ? currentBalance - minimumRequired
+            : 0;
+        if (amount > maxWithdrawal)
+            revert ExceedsWithdrawalLimit(amount, maxWithdrawal);
+
+        rewardPools[rewardKey] = currentBalance - amount;
+
         IERC20(config.rewardToken).safeTransfer(msg.sender, amount);
 
         emit EmergencyWithdrawn(clusterId, rollupId, msg.sender, amount);
@@ -251,9 +326,11 @@ contract RewardsManager is IRewardsManager, Ownable, ReentrancyGuard, Pausable {
         address newDepositor
     ) external onlyOwner whenNotPaused {
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
-        require(!isWhitelistedDepositor[rewardKey][newDepositor], "Already whitelisted");
-        require(newDepositor != address(0), "Invalid address");
-        require(whitelistedDepositorList[rewardKey].length < MAX_WHITELISTED_DEPOSITORS, "Too many depositors");
+        if (isWhitelistedDepositor[rewardKey][newDepositor]) 
+            revert DepositorAlreadyWhitelisted(newDepositor);
+        if (newDepositor == address(0)) revert ZeroAddress();
+        if (whitelistedDepositorList[rewardKey].length >= MAX_WHITELISTED_DEPOSITORS)
+            revert TooManyDepositors(whitelistedDepositorList[rewardKey].length, MAX_WHITELISTED_DEPOSITORS);
 
         whitelistedDepositorList[rewardKey].push(newDepositor);
         isWhitelistedDepositor[rewardKey][newDepositor] = true;
@@ -261,14 +338,17 @@ contract RewardsManager is IRewardsManager, Ownable, ReentrancyGuard, Pausable {
         emit WhitelistedDepositorAdded(clusterId, rollupId, newDepositor);
     }
 
+
     function removeWhitelistedDepositor(
         string calldata clusterId,
         string calldata rollupId,
         address depositorToRemove
     ) external onlyOwner whenNotPaused {
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
-        require(isWhitelistedDepositor[rewardKey][depositorToRemove], "Not whitelisted");
-        require(whitelistedDepositorList[rewardKey].length > 1, "Cannot remove last depositor");
+        if (!isWhitelistedDepositor[rewardKey][depositorToRemove]) 
+            revert DepositorNotWhitelisted(depositorToRemove);
+        if (whitelistedDepositorList[rewardKey].length <= 1) 
+            revert CannotRemoveLastDepositor();
 
         isWhitelistedDepositor[rewardKey][depositorToRemove] = false;
 
@@ -322,6 +402,4 @@ contract RewardsManager is IRewardsManager, Ownable, ReentrancyGuard, Pausable {
     function unpause() external onlyOwner {
         _unpause();
     }
-
-    
 }

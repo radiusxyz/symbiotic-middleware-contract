@@ -5,9 +5,11 @@ interface IRewardsManager {
     // Structs
     struct RewardPoolConfig {
         address rewardToken;
-        uint256 minPoolBalance;
+        uint256 amountPerInterval;
         uint256 distributionInterval;
         uint256 lastDistribution;
+        uint256 operatorRewardRatio;
+        uint256 stakerRewardRatio;
         bool isActive;
     }
 
@@ -17,10 +19,12 @@ interface IRewardsManager {
         uint256 availableAmount;
         address rewardToken;
         uint256 timeUntilNextDistribution;
+        uint256 operatorAmount;
+        uint256 stakerAmount;
     }
 
     // Events
-    event RewardPoolConfigAdded(
+     event RewardPoolConfigAdded(
         string indexed clusterId,
         string indexed rollupId,
         address rewardToken
@@ -30,7 +34,9 @@ interface IRewardsManager {
         string indexed clusterId,
         string indexed rollupId,
         uint256 newDistributionInterval,
-        uint256 newMinPoolBalance
+        uint256 newAmountPerInterval,
+        uint256 newOperatorRewardRatio,
+        uint256 newStakerRewardRatio
     );
 
     event RewardsDeposited(
@@ -67,34 +73,42 @@ interface IRewardsManager {
         uint256 amount
     );
 
+
     // Errors
-    error InvalidRewardToken();
-    error InvalidDistributionInterval();
-    error RollupNotRegistered();
-    error TokenNotRegistered();
-    error ConfigAlreadyExists();
-    error ConfigNotFound();
-    error NotAuthorizedDepositor();
     error ConfigNotActive();
-    error InsufficientDeposit();
-    error InsufficientBalance();
-    error InsufficientAllowance();
     error TooEarlyForDistribution();
-    error NoRewardsToDistribute();
-    error InvalidMinimumBalance();
-    error LastDepositorRemoval();
-    error AlreadyWhitelisted();
-    error NotWhitelisted();
+    error InsufficientBalance();
     error ZeroAddress();
-    error InsufficientPoolBalance();
-    error InvalidApprovalAmount();
+    error InvalidMiddleware(address provided, address expected);
+    error OverflowDetected();
+    error InsufficientPoolBalance(uint256 current, uint256 required);
+    error ExceedsWithdrawalLimit(uint256 amount, uint256 maxAllowed);
+    error InvalidAmount(uint256 amount, uint256 balance);
+    error NotAuthorizedDepositor();
+    error AmountTooLow(uint256 amount, uint256 minAmount);
+    error AmountTooHigh(uint256 amount, uint256 maxAmount);
+    error IntervalTooShort(uint256 interval, uint256 minInterval);
+    error IntervalTooLong(uint256 interval, uint256 maxInterval);
+    error InvalidRatio(uint256 ratio, uint256 minRatio, uint256 maxRatio);
+    error RatioSumInvalid(uint256 sum);
+    error ConfigExists();
+    error InvalidERC20Token(address token);
+    error StringInvalid(uint256 length, uint256 maxLength);
+    error InvalidNewAmountPerInterval();
+    error InvalidNewDistributionInterval(uint256 interval, uint256 minInterval);
+    error InvalidNewRewardRatios(uint256 operatorRatio, uint256 stakerRatio);
+    error DepositorAlreadyWhitelisted(address depositor);
+    error DepositorNotWhitelisted(address depositor);
+    error TooManyDepositors(uint256 current, uint256 max);
+    error CannotRemoveLastDepositor();
+    error InvalidNetworkMiddleware(address middleware);
+
 
     // Core Functions
     function approveRewardDistribution(
         address network,
         string calldata clusterId,
-        string calldata rollupId,
-        uint256 amount
+        string calldata rollupId
     ) external returns (uint256);
 
     function getDistributionInfo(
@@ -104,7 +118,9 @@ interface IRewardsManager {
         bool isEligible,
         uint256 availableAmount,
         address rewardToken,
-        uint256 timeUntilNextDistribution
+        uint256 timeUntilNextDistribution,
+        uint256 operatorAmount,
+        uint256 stakerAmount
     );
 
     // Pool Management Functions
@@ -112,15 +128,19 @@ interface IRewardsManager {
         string calldata clusterId,
         string calldata rollupId,
         address rewardToken,
-        uint256 minPoolBalance,
-        uint256 distributionInterval
+        uint256 amountPerInterval,
+        uint256 distributionInterval,
+        uint256 operatorRewardRatio,
+        uint256 stakerRewardRatio
     ) external;
 
     function updateRewardPoolConfig(
         string calldata clusterId,
         string calldata rollupId,
         uint256 newDistributionInterval,
-        uint256 newMinPoolBalance
+        uint256 newAmountPerInterval,
+        uint256 newOperatorRewardRatio,
+        uint256 newStakerRewardRatio
     ) external;
 
     function depositRewards(
