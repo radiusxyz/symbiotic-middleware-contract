@@ -25,14 +25,14 @@ interface IRewardsManager {
 
     // Events
      event RewardPoolConfigAdded(
-        string indexed clusterId,
-        string indexed rollupId,
+        string  clusterId,
+        string  rollupId,
         address rewardToken
     );
 
     event RewardPoolConfigUpdated(
-        string indexed clusterId,
-        string indexed rollupId,
+        string  clusterId,
+        string  rollupId,
         uint256 newDistributionInterval,
         uint256 newAmountPerInterval,
         uint256 newOperatorRewardRatio,
@@ -40,16 +40,16 @@ interface IRewardsManager {
     );
 
     event RewardsDeposited(
-        string indexed clusterId,
-        string indexed rollupId,
+        string  clusterId,
+        string  rollupId,
         address depositor,
         uint256 amount,
         uint256 totalPoolBalance
     );
 
     event RewardDistributionApproved(
-        string indexed clusterId,
-        string indexed rollupId,
+        string  clusterId,
+        string  rollupId,
         uint256 amount,
         uint256 timestamp
     );

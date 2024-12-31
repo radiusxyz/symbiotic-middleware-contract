@@ -55,10 +55,13 @@ interface IValidationServiceManager {
         mapping(uint256 => bytes32) blockCommitments;
         mapping(uint256 => bytes32) allTaskHashes;
         mapping(address => mapping(uint256 => bool)) allTaskResponses;
+        mapping(uint256 => uint256) taskTotalResponseCount;
+
     } 
 
     event NewTaskCreated(string clusterId, string rollupId, uint256 referenceTaskIndex, uint256 blockNumber, bytes32 blockCommitment, uint256 taskCreatedBlock);
-    event TaskResponded(string clusterId, string rollupId, uint256 referenceTaskIndex, bool response);
+    event TaskResponded(string clusterId, string rollupId, uint256 referenceTaskIndex, bool response, address operatingAddress);
+    event TaskThresholdMet(string clusterId, string rollupId, uint256 referenceTaskIndex);
 
     event RegisterToken(address token);
     event UnregisterToken(address token);
