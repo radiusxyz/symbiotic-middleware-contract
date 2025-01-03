@@ -16,7 +16,9 @@ contract Utils is Script {
     string public validationServiceManagerDeploymentOutput = "validation_service_manager_deployment_output";
     string public livenessRadiusDeploymentOutput = "liveness_radius_deployment_output";
 
-    string constant rewardsManagerDeploymentOutput = "rewards_manager_deployment_output";
+    string public rewardsCoreDeploymentOutput = "rewards_core_deployment_output";
+    string public simulationDeploymentOutput = "simulation_deployment_output";
+
 
     // Related to CollateralDeploy
     uint256 public initialSupply = 1000000000000000000000000000;
@@ -36,6 +38,8 @@ contract Utils is Script {
     address public defaultAdminRoleHolder = address(0x0000000000000000000000000000000000000000);
     address public adminFeeClaimRoleHolder = address(0x0000000000000000000000000000000000000000);
     address public adminFeeSetRoleHolder = address(0x0000000000000000000000000000000000000000);
+
+    address public rewardsManagerAddress = address(0x723a4cbDAaCEb02A830d1Bbe6f318939a304c266);
 
     // Related to middlewareDeploy
     address public network = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);

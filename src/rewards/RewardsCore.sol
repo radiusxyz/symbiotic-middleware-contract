@@ -8,15 +8,15 @@ import {Ownable} from "@openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin-contracts/contracts/utils/Pausable.sol";
 import {Math} from "@openzeppelin-contracts/contracts/utils/math/Math.sol";
-import {IRewardsManager} from "./interfaces/IRewardsManager.sol";
+import {IRewardsCore} from "./interfaces/IRewardsCore.sol";
 import {IValidationServiceManager} from "../IValidationServiceManager.sol";
 import {INetworkMiddlewareService} from "@symbiotic-core/src/interfaces/service/INetworkMiddlewareService.sol";
 
 /**
- * @title RewardsManager
+ * @title RewardsCore
  * @notice Manages reward pools and approvals for the ValidationServiceManager
  */
-contract RewardsManager is IRewardsManager, Ownable, ReentrancyGuard, Pausable {
+contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
     using Math for uint256;
     using SafeERC20 for IERC20;
 
