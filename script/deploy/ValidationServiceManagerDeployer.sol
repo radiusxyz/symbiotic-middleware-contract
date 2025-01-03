@@ -29,8 +29,8 @@ contract ValidationServiceManagerDeployer is Script, Utils {
             stakerRewardDeploymentOutput
         );
 
-         string memory rewardManagerOutput = readOutput(
-            rewardsManagerDeploymentOutput
+         string memory rewardsCoreOutput = readOutput(
+            rewardsCoreDeploymentOutput
         );
 
         address stakerRewardAddress = convertAddress(
@@ -40,8 +40,8 @@ contract ValidationServiceManagerDeployer is Script, Utils {
             vm.parseJson(operatorRewardOutput, ".addresses.operatorReward")
         );
 
-         address rewardManagerAddress = convertAddress(
-            vm.parseJson(rewardManagerOutput, ".addresses.rewardsManager")
+         address rewardsCoreAddress = convertAddress(
+            vm.parseJson(rewardsCoreOutput, ".addresses.rewardsCore")
         );
 
         ValidationServiceManager validationServiceManager = new ValidationServiceManager(
@@ -52,7 +52,7 @@ contract ValidationServiceManagerDeployer is Script, Utils {
             minSlashingWindow,
             stakerRewardAddress,
             operatorRewardAddress,
-            rewardManagerAddress
+            rewardsCoreAddress
         );
 
         string memory deployedContractAddresses_output = vm.serializeAddress(

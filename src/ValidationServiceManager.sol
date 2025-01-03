@@ -30,7 +30,7 @@ import {OperatingAddressRegistry} from "./OperatingAddressRegistry.sol";
 
 import {IDefaultOperatorRewards} from "@symbiotic-rewards/src/interfaces/defaultOperatorRewards/IDefaultOperatorRewards.sol";
 import {IDefaultStakerRewards} from "@symbiotic-rewards/src/interfaces/defaultStakerRewards/IDefaultStakerRewards.sol";
-import {IRewardsManager} from "./rewards/interfaces/IRewardsManager.sol";
+import {IRewardsCore} from "./rewards/interfaces/IRewardsCore.sol";
 
 import {ReentrancyGuard} from "@openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
@@ -572,7 +572,7 @@ contract ValidationServiceManager is
 
         console.log("Create New Task:");
         console.log("_clusterId:", _clusterId);
-        console.log("_taskMerkleRoot:", _rollupId);
+        console.log("_rollupId:", _rollupId);
  
         Task memory newTask;
         newTask.clusterId = _clusterId;
@@ -931,7 +931,7 @@ contract ValidationServiceManager is
             uint256 timeUntilNextDistribution,
             uint256 operatorAmount,
             uint256 stakerAmount
-        ) = IRewardsManager(REWARDS_MANAGER).getDistributionInfo(
+        ) = IRewardsCore(REWARDS_MANAGER).getDistributionInfo(
                 clusterId,
                 rollupId
             );
@@ -944,8 +944,8 @@ contract ValidationServiceManager is
         require(isEligible, "Not eligible for distribution");
         require(availableAmount > 0, "No rewards available");
 
-        // Get approval from RewardsManager for exact amount
-        uint256 approvedAmount = IRewardsManager(REWARDS_MANAGER)
+        // Get approval from RewardsCore for exact amount
+        uint256 approvedAmount = IRewardsCore(REWARDS_MANAGER)
             .approveRewardDistribution(network, clusterId, rollupId);
         
         console.log("Approved amount:", approvedAmount);
@@ -993,7 +993,7 @@ contract ValidationServiceManager is
             console.log("stakerTimestamp:", stakerTimestamp);
             console.log("maxAdminFee:", maxAdminFee);
             console.log("activeSharesHint:", string(activeSharesHint));
-console.log("activeStakeHint:", string(activeStakeHint));
+            console.log("activeStakeHint:", string(activeStakeHint));
 
             IDefaultStakerRewards(DEFAULT_STAKER_REWARDS).distributeRewards(
                 network,
