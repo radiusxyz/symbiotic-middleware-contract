@@ -41,6 +41,8 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     EnumerableMap.AddressToUintMap private operators;
 
     mapping(string => RollupTaskInfo) public rollupTaskInfos;
+    mapping(address => uint256) public minimumStakingAmounts;
+
 
     modifier updateStakeCache(uint48 epoch) {
         if (!totalStakeCached[epoch]) {
@@ -180,6 +182,10 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         tokens.enable(token);
 
         emit RegisterToken(token);  
+    }
+
+    function setMinimumStakingAmount(address token, uint256 amount) external onlyOwner {
+        minimumStakingAmounts[token] = amount;
     }
 
     function pauseToken(address token) external onlyOwner {
@@ -462,7 +468,6 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     }
 
     ///////////// Task management
-    // TODO:
     function createNewTask(
         string calldata _clusterId,
         string calldata _rollupId,
@@ -487,7 +492,6 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         emit NewTaskCreated(_clusterId, _rollupId, latestTaskNumber, _blockNumber, _blockCommitment);
     }
 
-    // TODO:
     function respondToTask(
         string calldata clusterId,
         string calldata rollupId,
@@ -527,14 +531,29 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
                     revert OperatorNotActive();
                 }
 
-                // TODO: checking minimum staking amount
-                return true;
+                bool hasEnoughStake = false;
+
+                for (uint256 j; j < tokens.length(); ++j) {
+                    (address token, uint48 tokenEnabledTime, uint48 tokenDisabledTime) = tokens.atWithTimes(j);
+
+                    if (!_wasActiveAt(tokenEnabledTime, tokenDisabledTime, epochStartTs)) {
+                        continue;
+                    }
+
+                    uint256 tokenStake = getOperatorTokenStake(operator, token, epochStartTs);
+                    if (tokenStake >= minimumStakingAmounts[token]) {
+                        hasEnoughStake = true;
+                        break;
+                    }
+                }
+
+                return hasEnoughStake;
             }          
         }
 
         return false;
     }
-    
+
     function _wasActiveAt(uint48 enabledTime, uint48 disabledTime, uint48 timestamp) private pure returns (bool) {
         return enabledTime != 0 && enabledTime <= timestamp && (disabledTime == 0 || disabledTime >= timestamp);
     }
