@@ -15,20 +15,17 @@ contract ValidationServiceManagerDeployer is Script, Utils {
     function run() external {
         vm.startBroadcast();
 
-        (,, address owner) = vm.readCallers();
-
         string memory output1 = readOutput(symbioticCoreDeploymentOutput);
         address operatorRegistryAddress = convertAddress(vm.parseJson(output1, ".addresses.operatorRegistry"));
-        address vaultFactoryAddress = convertAddress(vm.parseJson(output1, ".addresses.vaultFactory"));
+        address vaultRegistry = convertAddress(vm.parseJson(output1, ".addresses.vaultFactory"));
         address operatorNetworkOptInServiceAddress = convertAddress(vm.parseJson(output1, ".addresses.operatorNetworkOptInService"));
 
         ValidationServiceManager validationServiceManager = new ValidationServiceManager(
             network, 
-            vaultFactoryAddress, 
+            vaultRegistry, 
             operatorNetworkOptInServiceAddress, 
 
-            validationServiceManagerEpochDuration, 
-            minSlashingWindow
+            validationServiceManagerEpochDuration
         );
 
         string memory deployedContractAddresses_output = vm.serializeAddress(

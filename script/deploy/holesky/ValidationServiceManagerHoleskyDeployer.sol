@@ -22,20 +22,18 @@ contract ValidationServiceManagerHoleskyDeployer is Script, Utils {
 
         // fixed
         address operatorRegistryAddress = vm.envAddress("OPERATOR_REGISTRY_CONTRACT_ADDRESS");
-        address vaultFactoryAddress = vm.envAddress("VAULT_FACTORY_CONTRACT_ADDRESS");
+        address vaultRegistry = vm.envAddress("VAULT_FACTORY_CONTRACT_ADDRESS");
         address operatorNetworkOptInServiceAddress = vm.envAddress("OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS");
 
         uint48 validationServiceManagerEpochDuration = uint48(vm.envUint("VALIDATION_SERVICE_MANAGER_EPOCH_DURATION"));
-        uint48 minSlashingWindow = validationServiceManagerEpochDuration;
 
         ValidationServiceManager validationServiceManager = new ValidationServiceManager(
             network, 
 
-            vaultFactoryAddress, 
+            vaultRegistry, 
             operatorNetworkOptInServiceAddress, 
 
-            validationServiceManagerEpochDuration, 
-            minSlashingWindow
+            validationServiceManagerEpochDuration
         );
 
         console2.log("VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS=", address(validationServiceManager));

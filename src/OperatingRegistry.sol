@@ -44,7 +44,7 @@ abstract contract OperatingRegistry {
 
     function _initOperatingAddress(address operator, address operating) internal {
         if (operatingToOperator[operating] != address(0)) {
-            revert DuplicateOperating();
+            revert DuplicateOperatingAddress();
         }
 
         uint208 newIdx = ++totalOperatingCount;
