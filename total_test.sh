@@ -167,9 +167,9 @@ cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
 cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
 "getCurrentOperatorStake(address operator)(uint256)" $OPERATOR_ADDRESS
 cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
-"getCurrentOperatorEachTokenStake(address operator)((address, uint256)[])" $OPERATOR_ADDRESS
+"getCurrentOperatorEachStakeInfo(address operator)((address, uint256)[])" $OPERATOR_ADDRESS
 cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
-"getCurrentOperatorTokenStake(address operator, address token)(uint256)" $OPERATOR_ADDRESS $TOKEN_CONTRACT_ADDRESS
+"getCurrentOperatorStakeInfo(address operator, address token)(uint256)" $OPERATOR_ADDRESS $TOKEN_CONTRACT_ADDRESS
 ####################################################################################
 
 #####################################################################################

@@ -4,57 +4,44 @@ pragma solidity 0.8.25;
 import {Time} from "@openzeppelin-contracts/contracts/utils/types/Time.sol";
 import {Ownable} from "@openzeppelin-contracts/contracts/access/Ownable.sol";
 import {EnumerableMap} from "@openzeppelin-contracts/contracts/utils/structs/EnumerableMap.sol";
-
 import {ECDSAUpgradeable} from "@openzeppelin-contracts-upgradeable/contracts/utils/cryptography/ECDSAUpgradeable.sol";
-
 import {IRegistry} from "@symbiotic-core/src/interfaces/common/IRegistry.sol";
 import {IEntity} from "@symbiotic-core/src/interfaces/common/IEntity.sol";
 import {IVault} from "@symbiotic-core/src/interfaces/vault/IVault.sol";
 import {IBaseDelegator} from "@symbiotic-core/src/interfaces/delegator/IBaseDelegator.sol";
-import {IBaseSlasher} from "@symbiotic-core/src/interfaces/slasher/IBaseSlasher.sol";
 import {IOptInService} from "@symbiotic-core/src/interfaces/service/IOptInService.sol";
-import {IEntity} from "@symbiotic-core/src/interfaces/common/IEntity.sol";
-import {ISlasher} from "@symbiotic-core/src/interfaces/slasher/ISlasher.sol";
-import {IVetoSlasher} from "@symbiotic-core/src/interfaces/slasher/IVetoSlasher.sol";
 import {Subnetwork} from "@symbiotic-core/src/contracts/libraries/Subnetwork.sol";
-
 import {ICollateral} from "@symbiotic-collateral/src/interfaces/ICollateral.sol";
-
 import {MapWithTimeData} from "src/libraries/MapWithTimeData.sol";
 import {IValidationServiceManager} from "src/IValidationServiceManager.sol";
+import {OperatingRegistry} from "./OperatingRegistry.sol";
 
-import {OperatingAddressRegistry} from "./OperatingAddressRegistry.sol";
-
-contract ValidationServiceManager is Ownable, IValidationServiceManager, OperatingAddressRegistry {
+contract ValidationServiceManager is Ownable, IValidationServiceManager, OperatingRegistry {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
     using MapWithTimeData for EnumerableMap.AddressToUintMap;
     using Subnetwork for address;
     using ECDSAUpgradeable for bytes32;
 
     address public immutable NETWORK;
-    address public immutable OPERATOR_NET_OPT_IN;
-    address public immutable VAULT_FACTORY;
 
-    uint48 public immutable EPOCH_DURATION;
-    uint48 public immutable SLASHING_WINDOW;
+    address public immutable OPERATOR_NET_OPT_IN;
+    address public immutable VAULT_REGISTRY;
+
     uint48 public immutable START_TIME;
-    
-    uint48 private constant INSTANT_SLASHER_TYPE = 0;
-    uint48 private constant VETO_SLASHER_TYPE = 1;
+    uint48 public immutable EPOCH_DURATION;
 
     uint256 public subnetworksCnt;
 
-    mapping(uint48 => bool) public totalStakeCached;   // Check if total stake for the epoch is already calculated
-    mapping(uint48 => uint256) public totalStakeCache; // Total stake for the epoch
-    mapping(uint48 => mapping(address => uint256)) public tokenTotalStakeCache; // Total stake for the epoch for each token
+    mapping(uint48 => bool) public totalStakeCached; 
+    // mapping(uint48 => uint256) public totalStakeCache; 
+    mapping(uint48 => mapping(address => uint256)) public tokenTotalStakeCache;
     
     mapping(uint48 => mapping(address => uint256)) public operatorStakeCache;
-    mapping(uint48 => mapping(address => mapping(address => uint256))) public operatorTokenStakeCache;
+    mapping(uint48 => mapping(address => mapping(address => uint256))) public operatorStakeInfoCache;
     
-    
-    EnumerableMap.AddressToUintMap private operators;
-    EnumerableMap.AddressToUintMap private vaults;
     EnumerableMap.AddressToUintMap private tokens;
+    EnumerableMap.AddressToUintMap private vaults;
+    EnumerableMap.AddressToUintMap private operators;
 
     mapping(string => RollupTaskInfo) public rollupTaskInfos;
 
@@ -67,24 +54,18 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
 
     constructor(
         address _network,
-        address _vaultFactory,
+        address _vaultRegistry,
         address _operatorNetOptIn,
         uint48 _epochDuration,
-        uint48 _slashingWindow
     ) Ownable(msg.sender) {
-        if (_slashingWindow < _epochDuration) {
-            revert SlashingWindowTooShort();
-        }
-
         START_TIME = Time.timestamp();
         
         NETWORK = _network;
         
-        VAULT_FACTORY = _vaultFactory;
+        VAULT_REGISTRY = _vaultRegistry;
         OPERATOR_NET_OPT_IN = _operatorNetOptIn;
 
         EPOCH_DURATION = _epochDuration;
-        SLASHING_WINDOW = _slashingWindow;
 
         subnetworksCnt = 1;
     }
@@ -125,7 +106,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
             revert OperatorNotOptedIn();
         }
 
-        _updateOperatingAddress(operator, operatingAddress);
+        _initOperatingAddress(operator, operatingAddress);
 
         operators.add(operator);
         operators.enable(operator);
@@ -144,7 +125,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     function unregisterOperator(address operator) external onlyOwner {
         (, uint48 disabledTime) = operators.getTimes(operator);
 
-        if (disabledTime == 0 || disabledTime + SLASHING_WINDOW > Time.timestamp()) {
+        if (disabledTime == 0) {
             revert OperatorGracePeriodNotPassed();
         }
 
@@ -188,7 +169,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     function unregisterToken(address token) external onlyOwner {
         (, uint48 disabledTime) = tokens.getTimes(token);
 
-        if (disabledTime == 0 || disabledTime + SLASHING_WINDOW > Time.timestamp()) {
+        if (disabledTime == 0) {
             revert TokenGracePeriodNotPassed();
         }
 
@@ -246,24 +227,13 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
             revert VaultAlreadyRegistered();
         }
 
-        if (!IRegistry(VAULT_FACTORY).isEntity(vault)) {
+        if (!IRegistry(VAULT_REGISTRY).isEntity(vault)) {
             revert VaultNotRegisteredInSymbiotic();
         }
 
         address token = getTokenAddress(IVault(vault).collateral());
         if (!tokens.contains(token)) {
             revert TokenNotWhitelisted();
-        }
-
-        uint48 vaultEpoch = IVault(vault).epochDuration();
-        address slasher = IVault(vault).slasher();
-
-        if (slasher != address(0) && IEntity(slasher).TYPE() == VETO_SLASHER_TYPE) {
-            vaultEpoch -= IVetoSlasher(slasher).vetoDuration();
-        }
-
-        if (vaultEpoch < SLASHING_WINDOW) {
-            revert VaultEpochTooShort();
         }
 
         vaults.add(vault);
@@ -283,7 +253,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     function unregisterVault(address vault) external onlyOwner {
         (, uint48 disabledTime) = vaults.getTimes(vault);
 
-        if (disabledTime == 0 || disabledTime + SLASHING_WINDOW > Time.timestamp()) {
+        if (disabledTime == 0) {
             revert VaultGracePeriodNotPassed();
         }
 
@@ -343,12 +313,12 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         return getTotalStake(getCurrentEpoch());
     }
 
-    function getTotalStake(uint48 epoch) public view returns (uint256) {
-        if (totalStakeCached[epoch]) {
-            return totalStakeCache[epoch];
-        }
-        return _calcTotalStake(epoch);
-    }
+    // function getTotalStake(uint48 epoch) public view returns (uint256) {
+    //     if (totalStakeCached[epoch]) {
+    //         return totalStakeCache[epoch];
+    //     }
+    //     return _calcTotalStake(epoch);
+    // }
 
     function getCurrentOperatorStake(address operator) public view returns (uint256) {
         return getOperatorStake(operator, getCurrentEpoch());
@@ -383,14 +353,14 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         return stake;
     }
 
-    function getCurrentOperatorEachTokenStake(address operator) public view returns (TokenStake[] memory) {
-        return getOperatorEachTokenStake(operator, getCurrentEpoch());
+    function getCurrentOperatorEachStakeInfo(address operator) public view returns (StakeInfo[] memory) {
+        return getOperatorEachStakeInfo(operator, getCurrentEpoch());
     }
 
-    function getOperatorEachTokenStake(address operator, uint48 epoch) public view returns (TokenStake[] memory tokenStakes) {
+    function getOperatorEachStakeInfo(address operator, uint48 epoch) public view returns (StakeInfo[] memory tokenStakes) {
         uint48 epochStartTs = getEpochStartTs(epoch);
 
-        tokenStakes = new TokenStake[](tokens.length());
+        tokenStakes = new StakeInfo[](tokens.length());
         
         uint256 tokenIdx = 0;
 
@@ -402,8 +372,8 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
                 continue;
             }
 
-            uint256 tokenStake = getOperatorTokenStake(operator, token, epochStartTs);
-            tokenStakes[tokenIdx++] = TokenStake(token, tokenStake);
+            uint256 tokenStake = getOperatorStakeInfo(operator, token, epochStartTs);
+            tokenStakes[tokenIdx++] = StakeInfo(token, tokenStake);
         }
 
         assembly ("memory-safe") {
@@ -411,13 +381,13 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         }
     }
 
-    function getCurrentOperatorTokenStake(address operator, address token) public view returns (uint256) {
-        return getOperatorTokenStake(operator, token, getCurrentEpoch());
+    function getCurrentOperatorStakeInfo(address operator, address token) public view returns (uint256) {
+        return getOperatorStakeInfo(operator, token, getCurrentEpoch());
     }
 
-    function getOperatorTokenStake(address operator, address token, uint48 epoch) public view returns (uint256 stake) {
+    function getOperatorStakeInfo(address operator, address token, uint48 epoch) public view returns (uint256 stake) {
         if (totalStakeCached[epoch]) {
-            return operatorTokenStakeCache[epoch][token][operator];
+            return operatorStakeInfoCache[epoch][token][operator];
         }
 
         uint48 epochStartTs = getEpochStartTs(epoch);
@@ -466,7 +436,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
             }
 
             address operatingAddress = getOperatorOperatingAddressAt(operator, epochStartTs);
-            TokenStake[] memory tokenStakes = getOperatorEachTokenStake(operator, epochStartTs);
+            StakeInfo[] memory tokenStakes = getOperatorEachStakeInfo(operator, epochStartTs);
             uint256 operatorStake = getOperatorStake(operator, epochStartTs);
 
             operatorInfos[operatorIdx++] = OperatorInfo(operator, operatingAddress, tokenStakes, operatorStake);
@@ -487,17 +457,17 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         require(_checkIncludingOperatingAddress() == true, "Operator is not registered");
 
         Task memory newTask;
+
         newTask.clusterId = _clusterId;
         newTask.rollupId = _rollupId;
         newTask.blockNumber = _blockNumber;
         newTask.blockCommitment = _blockCommitment;
-        newTask.taskCreatedBlock = uint256(block.number);
 
         uint256 latestTaskNumber = rollupTaskInfos[_rollupId].latestTaskNumber;
         
         rollupTaskInfos[_rollupId].latestTaskNumber += 1;
         rollupTaskInfos[_rollupId].blockCommitments[latestTaskNumber] = _blockCommitment;
-        rollupTaskInfos[_rollupId].allTaskHashes[latestTaskNumber] = keccak256(abi.encode(newTask));
+        rollupTaskInfos[_rollupId].taskHash[latestTaskNumber] = keccak256(abi.encode(newTask));
 
         emit NewTaskCreated(_clusterId, _rollupId, latestTaskNumber, _blockNumber, _blockCommitment, newTask.taskCreatedBlock);
     }
@@ -511,11 +481,11 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         require(_checkIncludingOperatingAddress() == true, "Operator is not registered");
         
         require(
-            rollupTaskInfos[rollupId].allTaskResponses[msg.sender][referenceTaskIndex] == false,
+            rollupTaskInfos[rollupId].taskResponses[msg.sender][referenceTaskIndex] == false,
             "Operator has already responded to the task"
         );
 
-        rollupTaskInfos[rollupId].allTaskResponses[msg.sender][referenceTaskIndex] = response;
+        rollupTaskInfos[rollupId].taskResponses[msg.sender][referenceTaskIndex] = response;
 
         // TODO: We should give reward when Over Threshold
 
@@ -561,7 +531,6 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     function calcAndCacheStakes(uint48 epoch) public returns (uint256 totalStake) {
         uint48 epochStartTs = getEpochStartTs(epoch);
 
-        // for epoch older than SLASHING_WINDOW total stake can be invalidated (use cache)
         _validateEpoch(epochStartTs);
 
         for (uint256 i; i < operators.length(); ++i) {
@@ -580,7 +549,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
             for (uint256 j; j < tokens.length(); ++j) {
                 (address token, , ) = tokens.atWithTimes(j);
 
-                operatorTokenStakeCache[epoch][token][operator] = getOperatorTokenStake(operator, token, epochStartTs);
+                operatorStakeInfoCache[epoch][token][operator] = getOperatorStakeInfo(operator, token, epochStartTs);
             }
         }
 
@@ -597,11 +566,11 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         }
 
         totalStakeCached[epoch] = true;
-        totalStakeCache[epoch] = totalStake;
+        // totalStakeCache[epoch] = totalStake;
     }
 
     function _checkIncludingOperatingAddress() internal returns (bool) {
-        if (!operators.contains(msg.sender)) {
+        if (!operators.contains(getCurrentOperatingAddress(msg.sender))) {
             revert OperatorNotRegistered();
         }
 
@@ -629,7 +598,6 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     function _calcTotalStake(uint48 epoch) private view returns (uint256 totalStake) {
         uint48 epochStartTs = getEpochStartTs(epoch);
 
-        // for epoch older than SLASHING_WINDOW total stake can be invalidated (use cache)
         _validateEpoch(epochStartTs);
 
         for (uint256 i; i < operators.length(); ++i) {
@@ -657,8 +625,8 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
                 continue;
             }
 
-            uint256 operatorTokenStake = getOperatorTokenStake(operator, token, epochStartTs);
-            tokenTotalStake += operatorTokenStake;
+            uint256 operatorStakeInfo = getOperatorStakeInfo(operator, token, epochStartTs);
+            tokenTotalStake += operatorStakeInfo;
         }
     }
 
@@ -667,37 +635,8 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     }
 
     function _validateEpoch(uint48 epochStartTs) private view {
-        if (epochStartTs < Time.timestamp() - SLASHING_WINDOW) {
-            revert TooOldEpoch();
-        }
-
         if (epochStartTs > Time.timestamp()) {
             revert InvalidEpoch();
         }
-    }
-
-    // TODO: 
-    function _slashVault(
-        uint48 timestamp,
-        address vault,
-        bytes32 subnetwork,
-        address operator,
-        uint256 amount
-    ) private {
-        address slasher = IVault(vault).slasher();
-        uint256 slasherType = IEntity(slasher).TYPE();
-
-        if (slasherType == INSTANT_SLASHER_TYPE) {
-            ISlasher(slasher).slash(subnetwork, operator, amount, timestamp, new bytes(0));
-        } else if (slasherType == VETO_SLASHER_TYPE) {
-            IVetoSlasher(slasher).requestSlash(subnetwork, operator, amount, timestamp, new bytes(0));
-        } else {
-            revert UnknownSlasherType();
-        }
-    }
-
-    // TODO:
-    function slash(uint48 epoch, address operator, uint256 amount) public onlyOwner updateStakeCache(epoch) {
-        // TODO
     }
 }
