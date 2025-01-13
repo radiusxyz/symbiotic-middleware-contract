@@ -8,8 +8,7 @@ abstract contract OperatingRegistry {
     using Checkpoints for Checkpoints.Trace208;
     mapping(address => Checkpoints.Trace208) private operatorToIdx;
 
-    error DuplicateOperatingAddress();
-    error NotInitializedOperatingAddress();
+    error DuplicateOperatorAddress();
 
     mapping(address => address) private operatingToOperator;
     mapping(uint208 => address) private idxToOperating;
@@ -44,7 +43,7 @@ abstract contract OperatingRegistry {
 
     function _initOperatingAddress(address operator, address operating) internal {
         if (operatingToOperator[operating] != address(0)) {
-            revert DuplicateOperatingAddress();
+            revert DuplicateOperatorAddress();
         }
 
         uint208 newIdx = ++totalOperatingCount;
@@ -54,13 +53,15 @@ abstract contract OperatingRegistry {
     }
 
     function _updateOperatingAddress(address operator, address operating) internal {
-        if (operatingToOperator[operating] == address(0)) {
-            revert NotInitializedOperatingAddress();
+        if (operatingToOperator[operating] != address(0)) {
+            revert DuplicateOperatorAddress();
         }
 
+        address currentOperatingAddress = getCurrentOperatingAddress(operator);
         uint208 operatingIdx = operatorToIdx[operator].latest();
 
         idxToOperating[operatingIdx] = operating;
         operatingToOperator[operating] = operator;
+        operatingToOperator[currentOperatingAddress] = address(0);
     }
 }
