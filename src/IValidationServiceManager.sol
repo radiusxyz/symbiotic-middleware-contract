@@ -23,7 +23,7 @@ interface IValidationServiceManager {
 
     struct StakeInfo {
         address token;
-        uint256 stake;
+        uint256 stakeAmount;
     }
 
     struct OperatorInfo {

@@ -13,8 +13,9 @@ import {IOptInService} from "@symbiotic-core/src/interfaces/service/IOptInServic
 import {Subnetwork} from "@symbiotic-core/src/contracts/libraries/Subnetwork.sol";
 import {ICollateral} from "@symbiotic-collateral/src/interfaces/ICollateral.sol";
 import {MapWithTimeData} from "src/libraries/MapWithTimeData.sol";
-import {IValidationServiceManager} from "src/IValidationServiceManager.sol";
+
 import {OperatingRegistry} from "./OperatingRegistry.sol";
+import {IValidationServiceManager} from "src/IValidationServiceManager.sol";
 
 contract ValidationServiceManager is Ownable, IValidationServiceManager, OperatingRegistry {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
@@ -46,7 +47,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
 
     modifier updateStakeCache(uint48 epoch) {
         if (!totalStakeCached[epoch]) {
-            calcAndCacheStakes(epoch);
+            _calcAndCacheStakes(epoch);
         }
         _;
     }
@@ -129,7 +130,8 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         }
 
         operators.remove(operator);
-
+        _updateOperatingAddress(operator, address(0));
+        
         emit UnregisterOperator(operator);
     }
 
@@ -209,6 +211,10 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     }
 
     function isActiveToken(address token) public view returns (bool) {
+        if (!tokens.contains(token)) {
+            return false;
+        }
+
         uint48 epoch = getCurrentEpoch();
         uint48 epochStartTs = getEpochStartTs(epoch);
         
@@ -290,6 +296,10 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     }
 
     function isActiveVault(address vault) public view returns (bool) {
+        if (!vaults.contains(vault)) {
+            return false;
+        }
+
         uint48 epoch = getCurrentEpoch();
         uint48 epochStartTs = getEpochStartTs(epoch);
         
@@ -328,7 +338,9 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
 
     function getTokenTotalStake(address token, uint48 epoch) public view returns (uint256 totalStake) {
       uint48 epochStartTs = getEpochStartTs(epoch);
-      for (uint256 i; i < operators.length(); ++i) {
+      uint256 operatorCount = operators.length();
+
+      for (uint256 i; i < operatorCount; ++i) {
           (address operator, uint48 enabledTime, uint48 disabledTime) = operators.atWithTimes(i);
 
 
@@ -345,30 +357,31 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
 
     function getAllTokenTotalStakes(uint48 epoch) public view returns (StakeInfo[] memory tokenStakes) {
       uint48 epochStartTs = getEpochStartTs(epoch);
+      uint256 tokenCount = tokens.length();
+      uint256 operatorCount = operators.length();
 
-      uint256 tokenIndex = 0;
-      
-      for (uint256 i; i < tokens.length(); ++i) {
+      tokenStakes = new StakeInfo[](tokenCount);
+      for (uint256 i; i < tokenCount; ++i) {
           (address token, uint48 enabledTime, uint48 disabledTime) = tokens.atWithTimes(i);
 
-          if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) continue;
-
-          tokenStakes[tokenIndex++] = StakeInfo(token, 0);
+          tokenStakes[i] = StakeInfo(token, 0);
       }
       
-      for (uint256 i; i < operators.length(); ++i) {
+      for (uint256 i; i < operatorCount; ++i) {
         (address operator, uint48 enabledTime, uint48 disabledTime) = operators.atWithTimes(i);
 
         if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) continue;
 
-        for (uint256 j; j < tokens.length(); ++j) {
+        for (uint256 j; j < tokenCount; ++j) {
           (address token, uint48 enabledTime, uint48 disabledTime) = tokens.atWithTimes(j);
 
           if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) continue;
 
-          tokenStakes[j].stake += getOperatorTokenStake(operator, token, epoch);
+          tokenStakes[j].stakeAmount += getOperatorTokenStake(operator, token, epoch);
         }
       }
+
+      return tokenStakes;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////// 
@@ -383,8 +396,9 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         }
 
         uint48 epochStartTs = getEpochStartTs(epoch);
+        uint256 vaultCount = vaults.length();
 
-        for (uint256 i; i < vaults.length(); ++i) {
+        for (uint256 i; i < vaultCount; ++i) {
             (address vault, uint48 enabledTime, uint48 disabledTime) = vaults.atWithTimes(i);
             
             address checkToken = getTokenAddress(IVault(vault).collateral());
@@ -413,12 +427,13 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
 
     function getOperatorAllTokenStakes(address operator, uint48 epoch) public view returns (StakeInfo[] memory tokenStakes) {
         uint48 epochStartTs = getEpochStartTs(epoch);
+        uint256 tokenCount = tokens.length();
 
-        tokenStakes = new StakeInfo[](tokens.length());
+        tokenStakes = new StakeInfo[](tokenCount);
         
         uint256 tokenIndex = 0;
 
-        for (uint256 i; i < tokens.length(); ++i) {
+        for (uint256 i; i < tokenCount; ++i) {
             (address token, uint48 enabledTime, uint48 disabledTime) = tokens.atWithTimes(i);
 
             if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
@@ -434,19 +449,22 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         }
     }
 
-    function calcAndCacheStakes(uint48 epoch) public {
+    function _calcAndCacheStakes(uint48 epoch) internal {
         uint48 epochStartTs = getEpochStartTs(epoch);
         _validateEpoch(epochStartTs);
 
+        uint256 operatorCount = operators.length();
+        uint256 tokenCount = tokens.length();
+
         // Update operator token stakes
-        for (uint256 i; i < operators.length(); ++i) {
+        for (uint256 i; i < operatorCount; ++i) {
             (address operator, uint48 enabledTime, uint48 disabledTime) = operators.atWithTimes(i);
 
             if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
                 continue;
             }
             
-            for (uint256 j; j < tokens.length(); ++j) {
+            for (uint256 j; j < tokenCount; ++j) {
                 (address token, , ) = tokens.atWithTimes(j);
 
                 operatorStakeInfoCache[epoch][token][operator] = getOperatorTokenStake(operator, token, epochStartTs);
@@ -454,7 +472,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         }
 
         // Update total token stakes
-        for (uint256 i; i < tokens.length(); ++i) {
+        for (uint256 i; i < tokenCount; ++i) {
             (address token, uint48 enabledTime, uint48 disabledTime) = tokens.atWithTimes(i);
 
             if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
@@ -499,7 +517,6 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         bool response
     ) external {
         require(_checkIncludingOperatingAddress() == true, "Operator is not registered");
-        
         require(
             rollupTaskInfos[rollupId].taskResponses[msg.sender][referenceTaskIndex] == false,
             "Operator has already responded to the task"
@@ -523,35 +540,29 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
             revert InvalidEpoch();
         }
         
-        for (uint256 i; i < operators.length(); ++i) {
-            (address operator, uint48 enabledTime, uint48 disabledTime) = operators.atWithTimes(i);
-
-            if (operator == currentOperator) {
-                if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
-                    revert OperatorNotActive();
-                }
-
-                bool hasEnoughStake = false;
-
-                for (uint256 j; j < tokens.length(); ++j) {
-                    (address token, uint48 tokenEnabledTime, uint48 tokenDisabledTime) = tokens.atWithTimes(j);
-
-                    if (!_wasActiveAt(tokenEnabledTime, tokenDisabledTime, epochStartTs)) {
-                        continue;
-                    }
-
-                    uint256 tokenStake = getOperatorTokenStake(operator, token, epochStartTs);
-                    if (tokenStake >= minimumStakingAmounts[token]) {
-                        hasEnoughStake = true;
-                        break;
-                    }
-                }
-
-                return hasEnoughStake;
-            }          
+        (uint48 enabledTime, uint48 disabledTime) = operators.getTimes(currentOperator);
+        if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
+            revert OperatorNotActive();
         }
 
-        return false;
+        bool hasEnoughStake = false;
+        uint256 tokenCount = tokens.length();
+
+        for (uint256 i; i < tokenCount; ++i) {
+            (address token, uint48 tokenEnabledTime, uint48 tokenDisabledTime) = tokens.atWithTimes(i);
+
+            if (!_wasActiveAt(tokenEnabledTime, tokenDisabledTime, epochStartTs)) {
+                continue;
+            }
+
+            uint256 tokenStake = getOperatorTokenStake(currentOperator, token, epochStartTs);
+            if (tokenStake >= minimumStakingAmounts[token]) {
+                hasEnoughStake = true;
+                break;
+            }
+        }
+
+        return hasEnoughStake;
     }
 
     function _wasActiveAt(uint48 enabledTime, uint48 disabledTime, uint48 timestamp) private pure returns (bool) {
