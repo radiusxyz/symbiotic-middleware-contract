@@ -17,7 +17,7 @@ interface IValidationServiceManager {
     error VaultEpochTooShort();
     error VaultGracePeriodNotPassed();
 
-    error InvalidSubnetworksCnt();
+    error InvalidSubnetworkCount();
 
     error InvalidEpoch();
 
@@ -36,8 +36,8 @@ interface IValidationServiceManager {
     struct Task {
         string clusterId;
         string rollupId;
-
         uint256 blockNumber;
+        
         bytes32 blockCommitment;
     }
 
@@ -50,6 +50,7 @@ interface IValidationServiceManager {
     } 
 
     event RegisterToken(address token);
+    event SetMinimumStakeAmount(address token, uint256 minimumStakeAmount);
     event UnregisterToken(address token);
 
     event RegisterVault(address vault);
