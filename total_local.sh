@@ -19,8 +19,8 @@ VAULT_FACTORY_CONTRACT_ADDRESS="0x5FbDB2315678afecb367f032d93F642f64180aa3"
 #######
 
 ####### Vault
-VAULT_CONTRACT_ADDRESS="0x9ECba85638eB1A9F8C2C03c26467ee81234bc7d4"
-DELEGATOR_CONTRACT_ADDRESS="0xAbbe45B805160ce782c03cF29dA959F0f332319E"
+VAULT_CONTRACT_ADDRESS="0x7C79BE2454128557c341a96e5C6b92815b65E98E"
+DELEGATOR_CONTRACT_ADDRESS="0xFF1F4c11A96775b0fba0bA0643B732f765bE9591"
 #######
 
 ####### Radius
@@ -145,7 +145,7 @@ cast call $DELEGATOR_CONTRACT_ADDRESS --rpc-url $RPC_URL \
 "networkLimit(bytes32 subnetwork)(uint256 networkLimit)" $SUBNETWORK
 #####################
 cast send $DELEGATOR_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $VAULT_OWNER_PRIVATE_KEY \
-"setNetworkLimit(bytes32 subnetwork, uint256 amount)" $SUBNETWORK 100
+"setNetworkLimit(bytes32 subnetwork, uint256 amount)" $SUBNETWORK 30
 #####################
 
 # (12번)
@@ -177,12 +177,12 @@ cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
 CLUSTER_ID="radius"
 MAX_SEQUENCER_NUMBER=30
 
-ROLLUP_ID="rollup_id_2"
+ROLLUP_ID="rollup_id"
 OWNER_ADDRESS="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 ROLLUP_TYPE="polygon_cdk"
 ENCRYPTED_TRANSACTION_TYPE="skde"
 PLATFORM="ethereum"
-SERVICE_PROVIDER="radius"
+SERVICE_PROVIDER="symbiotic"
 VALIDATION_ADDRESS=$VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS
 ORDER_COMMITMENT_TYPE="sign"
 EXECUTOR_ADDRESS="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
@@ -269,63 +269,3 @@ cast call $VAULT_CONTRACT_ADDRESS --rpc-url $RPC_URL \
 ##################################################
 forge script script/deploy/VaultHoleskyDeploy.sol:VaultHoleskyDeploy --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY --broadcast -vvvv
 ##################################################
-
-
-########################################################################################
-# Rewards Test Commands
-# Sequence: addRewardConfig, Token Approve, depositRewards
-# Secondary Functions: addWhitelistedDepositor, Transfer token to secondary account, Token Approve, depositRewards
-# WIP: Distribution
-
-
-# Query Token Balances
-cast call $TOKEN_CONTRACT_ADDRESS "balanceOf(address)(uint256)" $SECONDARY_ADDRESS
-cast call $TOKEN_CONTRACT_ADDRESS "balanceOf(address)(uint256)" $NETWORK_ADDRESS
-
-# Get reward pool balance
-cast call $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL \
-"getRewardPoolBalance(string,string)(uint256)" $CLUSTER_ID $ROLLUP_ID
-
-
-#Create and Deposit Rewards
-
-cast send $REWARDS_MANAGER_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"addRewardPoolConfig(string,string,address,uint256,uint256)" $CLUSTER_ID $ROLLUP_ID $TOKEN_CONTRACT_ADDRESS 100 11
-
-
-cast send $TOKEN_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY "approve(address,uint256)" $REWARDS_MANAGER_ADDRESS 10000000000000000000
-
-
-cast send $REWARDS_MANAGER_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"depositRewards(string,string,uint256)" $CLUSTER_ID $ROLLUP_ID 10000000000000000000
-
-# Hardcoded Distribution Command
-cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --private-key $NETWORK_PRIVATE_KEY --rpc-url $RPC_URL\
-  "distributeRewards(string,string,address,bytes32,uint48,bytes,bytes,uint256)" \
-  $CLUSTER_ID \
-  $ROLLUP_ID \
-  $NETWORK_ADDRESS \
-  0x287b58b93ed6c17ace087bb87f611bf21102c0602b0956736b6e523fb41c328d \
-  1734658261 \
-  "0x" "0x" 10000
-
-
-# Hardcoded Claim Commands
-
-cast send $DEFAULT_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
-$OPERATOR_ADDRESS \
-$NETWORK_ADDRESS \
-$TOKEN_CONTRACT_ADDRESS \
-4000000000000000000 \
-"[0xb74c3ea8209e020c8923713850ab813c8f536d38f179762be415c239d3080a60]" \
---rpc-url $RPC_URL \
---private-key $OPERATING_PRIVATE_KEY
-
-cast send $DEFAULT_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
-$SECONDARY_ADDRESS \
-$NETWORK_ADDRESS \
-$TOKEN_CONTRACT_ADDRESS \
-3000000000000000000 \
-"[0x9543eb0d43cff4872c9a627d355e02990db82a37882ef80abaca5a7fc41cffc9]" \
---rpc-url $RPC_URL \
---private-key $SECONDARY_PRIVATE_KEY

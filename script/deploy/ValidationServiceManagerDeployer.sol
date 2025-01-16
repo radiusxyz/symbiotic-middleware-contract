@@ -15,44 +15,29 @@ contract ValidationServiceManagerDeployer is Script, Utils {
     function run() external {
         vm.startBroadcast();
 
-        (,, address owner) = vm.readCallers();
-
         string memory symbioticCoreDeploymentOutput = readOutput(symbioticCoreDeploymentOutput);
         address operatorRegistryAddress = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.operatorRegistry"));
-        address vaultFactoryAddress = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.vaultFactory"));
+        address vaultRegistry = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.vaultFactory"));
         address operatorNetworkOptInServiceAddress = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.operatorNetworkOptInService"));
+        
+        string memory operatorRewardOutput = readOutput(operatorRewardDeploymentOutput);
+        string memory stakerRewardOutput = readOutput(stakerRewardDeploymentOutputstring);
+        string memory rewardsCoreOutput = readOutput(rewardsCoreDeploymentOutput);
 
-         string memory operatorRewardOutput = readOutput(
-            operatorRewardDeploymentOutput
-        );
-        string memory stakerRewardOutput = readOutput(
-            stakerRewardDeploymentOutput
-        );
-
-         string memory rewardsCoreOutput = readOutput(
-            rewardsCoreDeploymentOutput
-        );
-
-        address stakerRewardAddress = convertAddress(
-            vm.parseJson(stakerRewardOutput, ".addresses.stakerReward")
-        );
-        address operatorRewardAddress = convertAddress(
-            vm.parseJson(operatorRewardOutput, ".addresses.operatorReward")
-        );
-
-         address rewardsCoreAddress = convertAddress(
-            vm.parseJson(rewardsCoreOutput, ".addresses.rewardsCore")
-        );
+        address stakerRewardAddress = convertAddress(vm.parseJson(stakerRewardOutput, ".addresses.stakerReward"));
+        address operatorRewardAddress = convertAddress(vm.parseJson(operatorRewardOutput, ".addresses.operatorReward"));
+        address rewardsCoreAddress = convertAddress( vm.parseJson(rewardsCoreOutput, ".addresses.rewardsCore"));
+       
 
         ValidationServiceManager validationServiceManager = new ValidationServiceManager(
             network, 
-            vaultFactoryAddress, 
+            vaultRegistry, 
             operatorNetworkOptInServiceAddress, 
             validationServiceManagerEpochDuration, 
-            minSlashingWindow,
             stakerRewardAddress,
             operatorRewardAddress,
             rewardsCoreAddress
+
         );
 
         string memory deployedContractAddresses_output = vm.serializeAddress(

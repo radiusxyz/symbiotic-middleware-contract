@@ -21,8 +21,15 @@ contract VaultHoleskyDeploy is Script, Utils {
         vm.startBroadcast();
         (,, address owner) = vm.readCallers();
 
-        address vaultConfiguratorAddress = address(0xD2191FE92987171691d552C219b8caEf186eb9cA);
-        address defaultCollateralAddress = address(0x81Dd92EE2119A5Dbed0F6499DFA3ca4a9E50658e);
+        string memory rawAddress = vm.envString("DEFAULT_COLLATERAL");
+        console2.log("Raw Address from env:", rawAddress);
+
+        // dynamic
+        address defaultCollateralAddress = vm.envAddress("DEFAULT_COLLATERAL");
+        console2.log("Default Collateral Address: ", defaultCollateralAddress);
+
+        // fixed
+        address vaultConfiguratorAddress = vm.envAddress("VAULT_CONFIGURATOR_ADDRESS");
 
         address[] memory networkLimitSetRoleHolders = new address[](1);
         networkLimitSetRoleHolders[0] = owner;
@@ -33,15 +40,13 @@ contract VaultHoleskyDeploy is Script, Utils {
         address[] memory operatorNetworkSharesSetRoleHolders = new address[](1);
         operatorNetworkSharesSetRoleHolders[0] = owner;
 
-        console2.log("version", IMigratablesFactory(IVaultConfigurator(vaultConfiguratorAddress).VAULT_FACTORY()).lastVersion());
-
          (address vault, address delegator, address slasher) = IVaultConfigurator(vaultConfiguratorAddress).create(
             IVaultConfigurator.InitParams({
-                version: 2,
+                version: 1,
                 owner: owner,
                 vaultParams: abi.encode(
                     IVault.InitParams({
-                        collateral: defaultCollateralAddress, /// TODO: tokenAddress
+                        collateral: defaultCollateralAddress, 
                         burner: address(0xdEaD),
                         epochDuration: epochDuration,
 
@@ -93,9 +98,9 @@ contract VaultHoleskyDeploy is Script, Utils {
             })
         );
 
-        console2.log("vault: ", address(vault));
-        console2.log("slasher: ", address(slasher));
-        console2.log("delegator: ", address(delegator));
+        console2.log("VAULT=", address(vault));
+        console2.log("SLASHER=", address(slasher));
+        console2.log("DELEGATOR=", address(delegator));
 
         vm.stopBroadcast();
     }
