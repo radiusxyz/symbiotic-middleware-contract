@@ -21,7 +21,9 @@ contract StakerRewardDeploy is Script, Utils {
         address networkMiddlewareServiceAddress = convertAddress(vm.parseJson(output1, ".addresses.networkMiddlewareService"));
 
         string memory output2 = readOutput(vaultDeploymentOutput);
-        address vaultAddress = convertAddress(vm.parseJson(output2, ".addresses.vault"));
+        address defaultVaultAddress = convertAddress(vm.parseJson(output2, ".addresses.defaultVault"));
+        address stETHVaultAddress = convertAddress(vm.parseJson(output2, ".addresses.stETHVault"));
+        address wBTCVaultAddress = convertAddress(vm.parseJson(output2, ".addresses.wBTCVault"));
 
         DefaultStakerRewards stakerRewardsImplementation =
             new DefaultStakerRewards(vaultFactoryAddress, networkMiddlewareServiceAddress);
@@ -34,9 +36,44 @@ contract StakerRewardDeploy is Script, Utils {
             address(defaultStakerRewardsFactory)
         );
 
-        address stakerReward = defaultStakerRewardsFactory.create(
+        // Create staker rewards for default vault
+        address defaultStakerReward = defaultStakerRewardsFactory.create(
             IDefaultStakerRewards.InitParams({
-                vault: vaultAddress,
+                vault: defaultVaultAddress,
+                adminFee: adminFee,
+                defaultAdminRoleHolder: defaultAdminRoleHolder,
+                adminFeeClaimRoleHolder: adminFeeClaimRoleHolder,
+                adminFeeSetRoleHolder: adminFeeSetRoleHolder
+            })
+        );
+
+        vm.serializeAddress(
+            deployedContractAddresses,
+            "defaultStakerReward",
+            defaultStakerReward
+        );
+
+        // Create staker rewards for stETH vault
+        address stETHStakerReward = defaultStakerRewardsFactory.create(
+            IDefaultStakerRewards.InitParams({
+                vault: stETHVaultAddress,
+                adminFee: adminFee,
+                defaultAdminRoleHolder: defaultAdminRoleHolder,
+                adminFeeClaimRoleHolder: adminFeeClaimRoleHolder,
+                adminFeeSetRoleHolder: adminFeeSetRoleHolder
+            })
+        );
+
+        vm.serializeAddress(
+            deployedContractAddresses,
+            "stETHStakerReward",
+            stETHStakerReward
+        );
+
+        // Create staker rewards for wBTC vault
+        address wBTCStakerReward = defaultStakerRewardsFactory.create(
+            IDefaultStakerRewards.InitParams({
+                vault: wBTCVaultAddress,
                 adminFee: adminFee,
                 defaultAdminRoleHolder: defaultAdminRoleHolder,
                 adminFeeClaimRoleHolder: adminFeeClaimRoleHolder,
@@ -46,8 +83,8 @@ contract StakerRewardDeploy is Script, Utils {
 
         string memory deployedContractAddresses_output = vm.serializeAddress(
             deployedContractAddresses,
-            "stakerReward",
-            stakerReward
+            "wBTCStakerReward",
+            wBTCStakerReward
         );
 
         string memory finalJson = vm.serializeString(

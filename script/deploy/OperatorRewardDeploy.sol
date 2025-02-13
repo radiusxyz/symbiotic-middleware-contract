@@ -28,12 +28,28 @@ contract OperatorRewardDeploy is Script, Utils {
             address(defaultOperatorRewardsFactory)
         );
 
-        address operatorReward = defaultOperatorRewardsFactory.create();
+        // Create operator rewards for default vault
+        address defaultOperatorReward = defaultOperatorRewardsFactory.create();
+        vm.serializeAddress(
+            deployedContractAddresses,
+            "defaultOperatorReward",
+            defaultOperatorReward
+        );
 
+        // Create operator rewards for stETH vault
+        address stETHOperatorReward = defaultOperatorRewardsFactory.create();
+        vm.serializeAddress(
+            deployedContractAddresses,
+            "stETHOperatorReward",
+            stETHOperatorReward
+        );
+
+        // Create operator rewards for wBTC vault
+        address wBTCOperatorReward = defaultOperatorRewardsFactory.create();
         string memory deployedContractAddresses_output = vm.serializeAddress(
             deployedContractAddresses,
-            "operatorReward",
-            operatorReward
+            "wBTCOperatorReward",
+            wBTCOperatorReward
         );
 
         string memory finalJson = vm.serializeString(
