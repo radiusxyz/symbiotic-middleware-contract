@@ -17,8 +17,6 @@ contract Utils is Script {
     string public livenessRadiusDeploymentOutput = "liveness_radius_deployment_output";
 
     string public rewardsCoreDeploymentOutput = "rewards_core_deployment_output";
-    string public simulationDeploymentOutput = "simulation_deployment_output";
-
 
     // Related to CollateralDeploy
     uint256 public initialSupply = 1000000000000000000000000000;
