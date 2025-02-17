@@ -15,15 +15,15 @@ import {IOperatorSpecificDelegator} from "@symbiotic-core/src/interfaces/delegat
 import {IVetoSlasher} from "@symbiotic-core/src/interfaces/slasher/IVetoSlasher.sol";
 import {IBaseSlasher} from "@symbiotic-core/src/interfaces/slasher/IBaseSlasher.sol";
 import {ISlasher} from "@symbiotic-core/src/interfaces/slasher/ISlasher.sol";
-import {LivenessRadius} from "src/liveness/LivenessRadius.sol";
+import {LivenessServiceManager} from "src/liveness/LivenessServiceManager.sol";
 
-contract LivenessRadiusHoleskyDeploy is Script, Utils {
+contract LivenessServiceManagerHoleskyDeploy is Script, Utils {
     function run() public {
         vm.startBroadcast();
 
-        LivenessRadius livenessRadius = new LivenessRadius();
+        LivenessServiceManager livenessServiceManager = new LivenessServiceManager();
 
-        console2.log("livenessRadius: ", address(livenessRadius));
+        console2.log("livenessServiceManager: ", address(livenessServiceManager));
 
         vm.stopBroadcast();
     }

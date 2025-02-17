@@ -2,25 +2,25 @@
 pragma solidity ^0.8.25;
 
 import {Ownable} from "@openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./interfaces/ILivenessRadius.sol";
+import "./interfaces/ILivenessServiceManager.sol";
 
-contract LivenessRadius is Ownable, ILivenessRadius {
+contract LivenessServiceManager is Ownable, ILivenessServiceManager {
     uint256 public constant BLOCK_MARGIN = 7;
 
     mapping(string => Cluster) private clusters;
     mapping(address => string[]) private clusterIdsByOwner;
-    mapping(address => string[]) private clusterIdsBySequencer;
+    mapping(address => string[]) private clusterIdsByTxOrderer;
 
     string[] private allClusterIds;
 
     mapping(string => mapping(string => Rollup)) public rollups;
-    mapping(string => mapping(address => bool)) public isSequencerRegistered;
+    mapping(string => mapping(address => bool)) public isTxOrdererRegistered;
     mapping(string => mapping(string => mapping(address => bool))) public isExecutorRegistered;
     
     constructor() Ownable(msg.sender) {}
 
     ///////////// Cluster management
-    function initializeCluster(string calldata clusterId, uint256 maxSequencerNumber) public override {
+    function initializeCluster(string calldata clusterId, uint256 maxTxOrdererNumber) public override {
         Cluster storage cluster = clusters[clusterId];
 
         if (cluster.owner != address(0)) {
@@ -29,33 +29,33 @@ contract LivenessRadius is Ownable, ILivenessRadius {
 
         cluster.id = clusterId;
         cluster.owner = msg.sender;
-        cluster.maxSequencerNumber = maxSequencerNumber;
-        cluster.currentSequencerCount = 0;
+        cluster.maxTxOrdererNumber = maxTxOrdererNumber;
+        cluster.currentTxOrdererCount = 0;
 
-        for (uint256 i = 0; i < maxSequencerNumber; i++) {
-            cluster.sequencers.push(address(0));
+        for (uint256 i = 0; i < maxTxOrdererNumber; i++) {
+            cluster.txOrderers.push(address(0));
         }
 
         clusterIdsByOwner[msg.sender].push(clusterId);
         allClusterIds.push(clusterId);
 
-        emit InitializedCluster(clusterId, msg.sender, maxSequencerNumber);
+        emit InitializedCluster(clusterId, msg.sender, maxTxOrdererNumber);
     }
 
     function getAllClusterIds() public view override returns (string[] memory) {
         return allClusterIds;
     }
 
-    function getMaxSequencerNumber(string calldata clusterId) public view override returns (uint256) {
-        return clusters[clusterId].maxSequencerNumber;
+    function getMaxTxOrdererNumber(string calldata clusterId) public view override returns (uint256) {
+        return clusters[clusterId].maxTxOrdererNumber;
     }
 
     function getClusterIdsByOwner(address owner) public view override returns (string[] memory) {
         return clusterIdsByOwner[owner];
     }
 
-    function getClusterIdsBySequencer(address sequencer) public view override returns (string[] memory) {
-        return clusterIdsBySequencer[sequencer];
+    function getClusterIdsByTxOrderer(address txOrderer) public view override returns (string[] memory) {
+        return clusterIdsByTxOrderer[txOrderer];
     }
 
     ///////////// Rollup management
@@ -126,60 +126,60 @@ contract LivenessRadius is Ownable, ILivenessRadius {
         return rollup;
     }
 
-    ///////////// Sequencer management
-    function registerSequencer(string calldata clusterId) public override {
+    ///////////// TxOrderer management
+    function registerTxOrderer(string calldata clusterId) public override {
         Cluster storage cluster = clusters[clusterId];
 
         if (cluster.owner == address(0)) {
             revert NotInitializedCluster();
         }
 
-        if (isSequencerRegistered[clusterId][msg.sender]) {
-            revert AlreadyRegisteredSequencer();
+        if (isTxOrdererRegistered[clusterId][msg.sender]) {
+            revert AlreadyRegisteredTxOrderer();
         }
 
-        if (cluster.currentSequencerCount >= cluster.maxSequencerNumber) {
-            revert ExceededMaxSequencerNumber();
+        if (cluster.currentTxOrdererCount >= cluster.maxTxOrdererNumber) {
+            revert ExceededMaxTxOrdererNumber();
         }
 
-        for (uint256 i = 0; i < cluster.sequencers.length; i++) {
-            if (cluster.sequencers[i] == address(0)) {
-                cluster.sequencers[i] = msg.sender;
-                isSequencerRegistered[clusterId][msg.sender] = true;
-                cluster.currentSequencerCount++;
+        for (uint256 i = 0; i < cluster.txOrderers.length; i++) {
+            if (cluster.txOrderers[i] == address(0)) {
+                cluster.txOrderers[i] = msg.sender;
+                isTxOrdererRegistered[clusterId][msg.sender] = true;
+                cluster.currentTxOrdererCount++;
                 
-                clusterIdsBySequencer[msg.sender].push(clusterId);
+                clusterIdsByTxOrderer[msg.sender].push(clusterId);
 
-                emit RegisteredSequencer(clusterId, msg.sender, i);
+                emit RegisteredTxOrderer(clusterId, msg.sender, i);
                 return;
             }
         }
 
-        revert ExceededMaxSequencerNumber();
+        revert ExceededMaxTxOrdererNumber();
     }
 
-    function deregisterSequencer(string calldata clusterId) public override {
+    function deregisterTxOrderer(string calldata clusterId) public override {
         Cluster storage cluster = clusters[clusterId];
 
         if (cluster.owner == address(0)) {
             revert NotInitializedCluster();
         }
 
-        if (!isSequencerRegistered[clusterId][msg.sender]) {
-            revert NotRegisteredSequencer();
+        if (!isTxOrdererRegistered[clusterId][msg.sender]) {
+            revert NotRegisteredTxOrderer();
         }
 
-        for (uint256 i = 0; i < cluster.sequencers.length; i++) {
-            if (cluster.sequencers[i] == msg.sender) {
-                cluster.sequencers[i] = address(0);
+        for (uint256 i = 0; i < cluster.txOrderers.length; i++) {
+            if (cluster.txOrderers[i] == msg.sender) {
+                cluster.txOrderers[i] = address(0);
                 break;
             }
         }
 
-        isSequencerRegistered[clusterId][msg.sender] = false;
-        cluster.currentSequencerCount--;
+        isTxOrdererRegistered[clusterId][msg.sender] = false;
+        cluster.currentTxOrdererCount--;
 
-        string[] storage clusterIds = clusterIdsBySequencer[msg.sender];        
+        string[] storage clusterIds = clusterIdsByTxOrderer[msg.sender];        
         for (uint i = 0; i < clusterIds.length; i++) {
             if (keccak256(bytes(clusterIds[i])) == keccak256(bytes(clusterId))) {
                 clusterIds[i] = clusterIds[clusterIds.length - 1];
@@ -187,24 +187,24 @@ contract LivenessRadius is Ownable, ILivenessRadius {
                 break;
             }
         }
-        emit DeregisteredSequencer(clusterId, msg.sender);
+        emit DeregisteredTxOrderer(clusterId, msg.sender);
     }
 
-    function getSequencers(string calldata clusterId) public view override returns (address[] memory) {
+    function getTxOrderers(string calldata clusterId) public view override returns (address[] memory) {
         Cluster storage cluster = clusters[clusterId];
 
         if (cluster.owner == address(0)) {
             revert NotInitializedCluster();
         }
 
-        uint256 sequencerIndex = 0;
-        address[] memory sequencers = new address[](cluster.currentSequencerCount);
-        for (uint256 i = 0; i < cluster.sequencers.length; i++) {
-            if (cluster.sequencers[i] != address(0)) {
-                sequencers[sequencerIndex++] = cluster.sequencers[i];
+        uint256 txOrdererIndex = 0;
+        address[] memory txOrderers = new address[](cluster.currentTxOrdererCount);
+        for (uint256 i = 0; i < cluster.txOrderers.length; i++) {
+            if (cluster.txOrderers[i] != address(0)) {
+                txOrderers[txOrdererIndex++] = cluster.txOrderers[i];
             }
         }
-        return sequencers;
+        return txOrderers;
     }
 
     ///////////// Executor management
