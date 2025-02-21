@@ -54,12 +54,18 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     EnumerableMap.AddressToUintMap private vaults;
     EnumerableMap.AddressToUintMap private operators;
 
-    address public immutable DEFAULT_OPERATOR_REWARDS;
-    address public immutable DEFAULT_STAKER_REWARDS;
+    address public immutable STAKER_REWARDS_REGISTRY;
+    address public immutable OPERATOR_REWARDS_REGISTRY;
     address public immutable REWARDS_MANAGER;
+
+    mapping(address => Vault) public vaultDetails;
+
 
     mapping(string => RollupTaskInfo) public rollupTaskInfos;
     mapping(address => uint256) public minimumStakingAmounts;
+
+    mapping(string => mapping(string => mapping(uint256 => DistributionData))) private distributionDataByTask;  // clusterId => rollupId => taskId => data
+
 
     modifier updateStakeCache(uint48 epoch) {
         if (!totalStakeCached[epoch]) {
@@ -75,8 +81,8 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         address _operatorNetOptIn,
 
         uint48 _epochDuration, // TODO
-        address _default_staker_rewards,
-        address _default_operator_rewards,
+        address _staker_rewards_registry,
+        address _operator_rewards_registry,
         address _rewards_manager
 
     ) Ownable(msg.sender) {
@@ -91,8 +97,8 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
 
         subnetworkCount = 1;
         
-         DEFAULT_STAKER_REWARDS = _default_staker_rewards;
-        DEFAULT_OPERATOR_REWARDS = _default_operator_rewards;
+        STAKER_REWARDS_REGISTRY = _staker_rewards_registry;
+        OPERATOR_REWARDS_REGISTRY = _operator_rewards_registry;
 
         REWARDS_MANAGER = _rewards_manager;
     }
@@ -215,6 +221,10 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         emit RegisterToken(token);
     }
 
+    function registerTokenTest(address token) external onlyOwner {
+        emit RegisterToken(token);
+    }
+
     function setMinimumStakingAmount(address token, uint256 amount) external onlyOwner {
         minimumStakingAmounts[token] = amount;
 
@@ -285,13 +295,25 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         }
     }
 
+    function getVaultToken(address vault) public view returns (address) {
+        return getTokenAddress(IVault(vault).collateral());
+    }
+
     ///////////// Vault management
-    function registerVault(address vault) external onlyOwner {
+    function registerVault(address vault, address stakerRewards, address operatorRewards) external onlyOwner {
         if (vaults.contains(vault)) {
             revert VaultAlreadyRegistered();
         }
 
         if (!IRegistry(VAULT_REGISTRY).isEntity(vault)) {
+            revert VaultNotRegisteredInSymbiotic();
+        }
+
+        if (!IRegistry(STAKER_REWARDS_REGISTRY).isEntity(stakerRewards)) {
+            revert VaultNotRegisteredInSymbiotic();
+        }
+
+        if (!IRegistry(OPERATOR_REWARDS_REGISTRY).isEntity(operatorRewards)) {
             revert VaultNotRegisteredInSymbiotic();
         }
 
@@ -303,7 +325,13 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         vaults.add(vault);
         vaults.enable(vault);
 
-        emit RegisterVault(vault);
+        vaultDetails[vault] = Vault({
+            tokenAddress: token,
+            stakerRewards: stakerRewards,
+            operatorRewards: operatorRewards
+        });
+
+        emit RegisterVault(vault, stakerRewards, operatorRewards);
     }
 
     function pauseVault(address vault) external onlyOwner {
@@ -322,6 +350,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         }
 
         vaults.remove(vault);
+        delete vaultDetails[vault];
 
         emit UnregisterVault(vault);
     }
@@ -546,55 +575,158 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         totalStakeCached[epoch] = true;
     }
 
-    ///////////// Task management
-     function createNewTask(
-        string calldata _clusterId,
-        string calldata _rollupId,
-        uint256 _blockNumber,
-        bytes32 _blockCommitment,
-        bytes32 _taskMerkleRoot
 
-    ) public updateStakeCache(getCurrentEpoch()) {
-        require(checkIncludingOperatingAddress(msg.sender) == true, "Operator is not registered");
+function createNewTask(
+    TaskParams calldata taskParams,
+    DistributionParams calldata distributionParams
+) external {
+    console.log("================== createNewTask START ==================");
+    console.log("Caller address:", msg.sender);
+    uint32 loop_indx = 1;
+    console.log("Loop Index: ", loop_indx);
 
-        console.log("Create New Task:");
-        console.log("_clusterId:", _clusterId);
-        console.log("_rollupId:", _rollupId);
- 
-        Task memory newTask;
+    require(checkIncludingOperatingAddress(msg.sender), "Operator not registered");
 
-        newTask.clusterId = _clusterId;
-        newTask.rollupId = _rollupId;
-        newTask.blockNumber = _blockNumber;
-        newTask.blockCommitment = _blockCommitment;
+    uint256 latestTaskNumber = rollupTaskInfos[taskParams.rollupId].latestTaskNumber;
+    rollupTaskInfos[taskParams.rollupId].latestTaskNumber = latestTaskNumber + 1;
+    rollupTaskInfos[taskParams.rollupId].blockCommitments[latestTaskNumber] = taskParams.blockCommitment;
 
-        uint256 latestTaskNumber = rollupTaskInfos[_rollupId].latestTaskNumber;
+    Task memory newTask = Task({
+        clusterId: taskParams.clusterId,
+        rollupId: taskParams.rollupId,
+        blockNumber: taskParams.blockNumber,
+        blockCommitment: taskParams.blockCommitment
+    });
+
+    bytes32 taskHash = keccak256(abi.encode(newTask));
+    rollupTaskInfos[taskParams.rollupId].taskHash[latestTaskNumber] = taskHash;
+
+    emit NewTaskCreated(taskParams.clusterId, taskParams.rollupId, latestTaskNumber, taskParams.blockNumber, taskParams.blockCommitment );
+    console.log("Emitted NewTaskCreated event");
+
+    if (latestTaskNumber > 0 && distributionParams.operatorMerkleRoots.length > 0) {
+        _storeDistributionData(taskParams.clusterId, taskParams.rollupId, latestTaskNumber, distributionParams);
         
-        rollupTaskInfos[_rollupId].latestTaskNumber += 1;
-        rollupTaskInfos[_rollupId].blockCommitments[latestTaskNumber] = _blockCommitment;
-        rollupTaskInfos[_rollupId].taskHash[latestTaskNumber] = keccak256(abi.encode(newTask));
+    } else {
+        console.log("\nSkipping distributions - conditions not met.");
+    }
 
-        console.log("latestTaskNumber:", latestTaskNumber);
-                  console.log("Sender:", msg.sender);
+    console.log("================== createNewTask END ==================");
+        loop_indx = loop_indx + 1;
 
-        // If not first task and merkle root is present, distribute rewards
-        uint48 oneSecondAgo = uint48(block.timestamp - 5);
+}
 
-        if (latestTaskNumber > 0 && _taskMerkleRoot != bytes32(0)) {
-            this.distributeRewards(
-                _clusterId,
-                _rollupId,
+// Store distribution data separately
+function _storeDistributionData(
+    string calldata clusterId,
+    string calldata rollupId,
+    uint256 latestTaskNumber,
+    DistributionParams calldata distributionParams
+) internal {
+    DistributionData storage data = distributionDataByTask[clusterId][rollupId][latestTaskNumber];
+    data.vaultAddresses = distributionParams.vaultAddresses;
+    data.operatorMerkleRoots = distributionParams.operatorMerkleRoots;
+    data.totalStakerReward = distributionParams.totalStakerReward;
+    data.totalOperatorReward = distributionParams.totalOperatorReward;
+}
+
+// Process distributions
+function _processDistributions(
+    string calldata clusterId,
+    string calldata rollupId,
+    uint256 referenceTaskIndex
+) internal {
+    DistributionData storage data = distributionDataByTask[clusterId][rollupId][referenceTaskIndex];
+    uint48 oneSecondAgo = uint48(block.timestamp - 5);
+
+    (
+        bool isEligible,
+        uint256 availableAmount,
+        address rewardToken,
+        uint256 timeUntilNextDistribution,
+        uint256 operatorAmount,
+        uint256 stakerAmount
+    ) = IRewardsCore(REWARDS_MANAGER).getDistributionInfo(clusterId, rollupId);
+
+    console.log("Distribution info received from rewards manager.");
+
+    uint256 approvedAmount = IRewardsCore(REWARDS_MANAGER)
+        .approveRewardDistribution(NETWORK, clusterId, rollupId);
+    console.log("Approved amount:", approvedAmount);
+
+    IERC20(rewardToken).safeTransferFrom(
+        REWARDS_MANAGER,
+        address(this),
+        availableAmount
+    );
+    console.log("Transferred rewards from manager");
+
+    _distributeToVaults(rewardToken, data, oneSecondAgo);
+
+    delete distributionDataByTask[clusterId][rollupId][referenceTaskIndex];
+}
+
+// Distribute rewards to each vault
+function _distributeToVaults(
+    address rewardToken,
+    DistributionData storage data,
+    uint48 oneSecondAgo
+) internal {
+    uint256 vaultCount = data.vaultAddresses.length;
+    for (uint256 i = 0; i < vaultCount; i++) {
+        _processVaultDistribution(
+            rewardToken,
+            data.vaultAddresses[i],
+            data.operatorMerkleRoots[i],
+            data.totalStakerReward[i],
+            data.totalOperatorReward[i],
+            oneSecondAgo
+        );
+    }
+}
+     
+    function _processVaultDistribution(
+        address rewardToken,
+        address vaultAddress,
+        bytes32 operatorMerkleRoot,
+        uint256 stakerReward,
+        uint256 operatorReward,
+        uint48 oneSecondAgo
+    ) internal {
+        Vault memory vaultInfo = vaultDetails[vaultAddress];
+        console.log("Processing vault distribution for:", vaultAddress);
+        console.log("Vault tokenAddress:", vaultInfo.tokenAddress);
+
+        if (vaultInfo.stakerRewards != address(0)) {
+            _safeTokenApprove(rewardToken, vaultInfo.stakerRewards, stakerReward);
+            console.log("Approved staker rewards contract for amount:", stakerReward);
+            IDefaultStakerRewards(vaultInfo.stakerRewards).distributeRewards(
                 NETWORK,
-                _taskMerkleRoot,
-                oneSecondAgo,
-               new bytes(0),  // empty bytes for activeSharesHint
-                new bytes(0),  // empty bytes for activeStakeHint
-                10000
+                rewardToken,
+                stakerReward,
+                abi.encode(oneSecondAgo, 10000, new bytes(0), new bytes(0))
             );
+            console.log("Staker rewards distributed successfully");
+        } else {
+            console.log("Skipping staker rewards distribution - no contract set");
         }
 
-        emit NewTaskCreated(_clusterId, _rollupId, latestTaskNumber, _blockNumber, _blockCommitment);
+        if (vaultInfo.operatorRewards != address(0)) {
+            _safeTokenApprove(rewardToken, vaultInfo.operatorRewards, operatorReward);
+            console.log("Approved operator rewards contract for amount:", operatorReward);
+            IDefaultOperatorRewards(vaultInfo.operatorRewards).distributeRewards(
+                NETWORK,
+                rewardToken,
+                operatorReward,
+                operatorMerkleRoot
+            );
+            console.log("Operator rewards distributed successfully");
+        } else {
+            console.log("Skipping operator rewards distribution - no contract set");
+        }
     }
+
+
 
     uint256 public lastEmitTime;
     uint256 public constant EMIT_DELAY = 1; // 1 second
@@ -612,10 +744,47 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         );
 
         rollupTaskInfos[rollupId].taskResponses[msg.sender][referenceTaskIndex] = response;
+        rollupTaskInfos[rollupId].taskTotalResponseCount[referenceTaskIndex]++;
+
         emit TaskResponded(clusterId, rollupId, referenceTaskIndex, response, msg.sender);
-        if (rollupTaskInfos[rollupId].taskTotalResponseCount[referenceTaskIndex] == 2) {
+            
+        if (rollupTaskInfos[rollupId].taskTotalResponseCount[referenceTaskIndex] == 5) {
+            require(
+                block.timestamp >= lastEmitTime + EMIT_DELAY,
+                "Must wait for delay period"
+            );
+            lastEmitTime = block.timestamp;
             emit TaskThresholdMet(clusterId, rollupId, referenceTaskIndex);
+
+            // Check if there's distribution data before processing
+            DistributionData storage data = distributionDataByTask[clusterId][rollupId][referenceTaskIndex];
+            
+            // Only process distributions if there are vault addresses stored
+            if (data.vaultAddresses.length > 0) {
+                _processDistributions(clusterId, rollupId, referenceTaskIndex);
+            }
         }
+    }
+
+function getDistributionData(
+        string memory clusterId,
+        string memory rollupId,
+        uint256 referenceTaskId
+    ) public view returns (
+        address[] memory vaultAddresses,
+        bytes32[] memory operatorMerkleRoots,
+        uint256[] memory totalStakerReward,
+        uint256[] memory totalOperatorReward
+    ) {
+        DistributionData storage data = distributionDataByTask[clusterId][rollupId][referenceTaskId];
+        
+        
+        return (
+            data.vaultAddresses,
+            data.operatorMerkleRoots,
+            data.totalStakerReward,
+            data.totalOperatorReward
+        );
     }
 
     function checkIncludingOperatingAddress(address currentOperating) public view returns (bool) {
@@ -685,119 +854,121 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         // Using forceApprove which safely handles approvals without requiring a reset
         SafeERC20.safeIncreaseAllowance(IERC20(token), spender, amount);
     }
-
     /**
      * @notice Distributes rewards for a given cluster and rollup
      * @dev Only callable by the network middleware
      */
-    function distributeRewards(
-    string calldata clusterId,
-    string calldata rollupId,
-    address network,
-    bytes32 operatorMerkleRoot,
-    uint48 stakerTimestamp,
-    bytes memory activeSharesHint,
-    bytes memory activeStakeHint,
-    uint256 maxAdminFee
-    ) external nonReentrant {
-        console.log("Starting distributeRewards for cluster:", clusterId);
-        console.log("Starting distributeRewards for rollup:", rollupId);
+    // function distributeRewards(
+    // string calldata clusterId,
+    // string calldata rollupId,
+    // address network,
+    // bytes32 operatorMerkleRoot,
+    // uint48 stakerTimestamp,
+    // bytes memory activeSharesHint,
+    // bytes memory activeStakeHint,
+    // uint256 maxAdminFee
+    // ) external nonReentrant {
+    //     console.log("Starting distributeRewards for cluster:", clusterId);
+    //     console.log("Starting distributeRewards for rollup:", rollupId);
 
-        console.log("Network address:", network);
+    //     console.log("Network address:", network);
         
-        // Check if reward pool exists and is eligible for distribution
-        (
-            bool isEligible,
-            uint256 availableAmount,
-            address rewardToken,
-            uint256 timeUntilNextDistribution,
-            uint256 operatorAmount,
-            uint256 stakerAmount
-        ) = IRewardsCore(REWARDS_MANAGER).getDistributionInfo(
-                clusterId,
-                rollupId
-            );
+    //     // Check if reward pool exists and is eligible for distribution
+    //     (
+    //         bool isEligible,
+    //         uint256 availableAmount,
+    //         address rewardToken,
+    //         uint256 timeUntilNextDistribution,
+    //         uint256 operatorAmount,
+    //         uint256 stakerAmount
+    //     ) = IRewardsCore(REWARDS_MANAGER).getDistributionInfo(
+    //             clusterId,
+    //             rollupId
+    //         );
         
-        console.log("Distribution info - Eligible:", isEligible);
-        console.log("Available amount:", availableAmount);
-        console.log("Reward token:", rewardToken);
-        console.log("Time until next distribution:", timeUntilNextDistribution);
+    //     console.log("Distribution info - Eligible:", isEligible);
+    //     console.log("Available amount:", availableAmount);
+    //     console.log("Reward token:", rewardToken);
+    //     console.log("Time until next distribution:", timeUntilNextDistribution);
 
-        require(isEligible, "Not eligible for distribution");
-        require(availableAmount > 0, "No rewards available");
+    //     require(isEligible, "Not eligible for distribution");
+    //     require(availableAmount > 0, "No rewards available");
 
-        // Get approval from RewardsCore for exact amount
-        uint256 approvedAmount = IRewardsCore(REWARDS_MANAGER)
-            .approveRewardDistribution(network, clusterId, rollupId);
+    //     // Get approval from RewardsCore for exact amount
+    //     uint256 approvedAmount = IRewardsCore(REWARDS_MANAGER)
+    //         .approveRewardDistribution(network, clusterId, rollupId);
         
-        console.log("Approved amount:", approvedAmount);
+    //     console.log("Approved amount:", approvedAmount);
  
-        console.log("Operator amount (70%):", operatorAmount);
-        console.log("Staker amount (30%):", stakerAmount);
+    //     console.log("Operator amount (70%):", operatorAmount);
+    //     console.log("Staker amount (30%):", stakerAmount);
 
-        // Transfer and distribute operator rewards
-        if (operatorAmount > 0) {
-            console.log("Processing operator rewards transfer");
-            IERC20(rewardToken).safeTransferFrom(
-                REWARDS_MANAGER,
-                address(this),
-                operatorAmount
-            );
+    //     // Transfer and distribute operator rewards
+    //     if (operatorAmount > 0) {
+    //         console.log("Processing operator rewards transfer");
+    //         IERC20(rewardToken).safeTransferFrom(
+    //             REWARDS_MANAGER,
+    //             address(this),
+    //             operatorAmount
+    //         );
 
-            _safeTokenApprove(rewardToken, DEFAULT_OPERATOR_REWARDS, operatorAmount);
-            console.log("Approved operator rewards contract to spend:", operatorAmount);
+    //         _safeTokenApprove(rewardToken, DEFAULT_OPERATOR_REWARDS, operatorAmount);
+    //         console.log("Approved operator rewards contract to spend:", operatorAmount);
 
-            console.log("rewardToken: ", rewardToken);
+    //         console.log("rewardToken: ", rewardToken);
 
-            console.log("DEFAULT_OPERATOR_REWARDS: ", DEFAULT_OPERATOR_REWARDS);
+    //         console.log("DEFAULT_OPERATOR_REWARDS: ", DEFAULT_OPERATOR_REWARDS);
 
 
-            IDefaultOperatorRewards(DEFAULT_OPERATOR_REWARDS).distributeRewards(
-                network,
-                rewardToken,
-                operatorAmount,
-                operatorMerkleRoot
-            );
-            console.log("Operator rewards distributed successfully");
-        }
+    //         IDefaultOperatorRewards(DEFAULT_OPERATOR_REWARDS).distributeRewards(
+    //             network,
+    //             rewardToken,
+    //             operatorAmount,
+    //             operatorMerkleRoot
+    //         );
+    //         console.log("Operator rewards distributed successfully");
+    //     }
 
-        // Transfer and distribute staker rewards
-        if (stakerAmount > 0) {
-            console.log("Processing staker rewards transfer");
-            IERC20(rewardToken).safeTransferFrom(
-                REWARDS_MANAGER,
-                address(this),
-                stakerAmount
-            );
+    //     // Transfer and distribute staker rewards
+    //     if (stakerAmount > 0) {
+    //         console.log("Processing staker rewards transfer");
+    //         IERC20(rewardToken).safeTransferFrom(
+    //             REWARDS_MANAGER,
+    //             address(this),
+    //             stakerAmount
+    //         );
 
-            _safeTokenApprove(rewardToken, DEFAULT_STAKER_REWARDS, stakerAmount);
-            console.log("Approved staker rewards contract to spend:", stakerAmount);
-            console.log("stakerTimestamp:", stakerTimestamp);
-            console.log("maxAdminFee:", maxAdminFee);
-            console.log("activeSharesHint:", string(activeSharesHint));
-            console.log("activeStakeHint:", string(activeStakeHint));
+    //         _safeTokenApprove(rewardToken, DEFAULT_STAKER_REWARDS, stakerAmount);
+    //         console.log("Approved staker rewards contract to spend:", stakerAmount);
+    //         console.log("stakerTimestamp:", stakerTimestamp);
+    //         console.log("maxAdminFee:", maxAdminFee);
+    //         console.log("activeSharesHint:", string(activeSharesHint));
+    //         console.log("activeStakeHint:", string(activeStakeHint));
 
-            IDefaultStakerRewards(DEFAULT_STAKER_REWARDS).distributeRewards(
-                network,
-                rewardToken,
-                stakerAmount,
-                abi.encode(
-                    stakerTimestamp,
-                    maxAdminFee,
-                    activeSharesHint,
-                    activeStakeHint
-                )
-            );
-            console.log("Staker rewards distributed successfully");
-        }
+    //         IDefaultStakerRewards(DEFAULT_STAKER_REWARDS).distributeRewards(
+    //             network,
+    //             rewardToken,
+    //             stakerAmount,
+    //             abi.encode(
+    //                 stakerTimestamp,
+    //                 maxAdminFee,
+    //                 activeSharesHint,
+    //                 activeStakeHint
+    //             )
+    //         );
+    //         console.log("Staker rewards distributed successfully");
+    //     }
 
-        console.log("Rewards distribution completed successfully");
-        emit RewardsDistributed(
-            clusterId,
-            rollupId,
-            operatorAmount,
-            stakerAmount,
-            operatorMerkleRoot
-        );
-    }
+    //     console.log("Rewards distribution completed successfully");
+    //     emit RewardsDistributed(
+    //         clusterId,
+    //         rollupId,
+    //         operatorAmount,
+    //         stakerAmount,
+    //         operatorMerkleRoot
+    //     );
+    // }
+
 }
+
+      

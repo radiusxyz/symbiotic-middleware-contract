@@ -21,6 +21,40 @@ interface IValidationServiceManager {
 
     error InvalidEpoch();
 
+    error StakerRewardsNotRegistered();
+    error OperatorRewardsNotRegistered();
+
+    struct Vault {
+        address tokenAddress;
+        address stakerRewards;
+        address operatorRewards;
+    }
+
+    struct DistributionParams {
+        address[] vaultAddresses;
+        bytes32[] operatorMerkleRoots;
+        uint256[] totalStakerReward;
+        uint256[] totalOperatorReward;
+    }
+
+    struct TaskParams {
+        string clusterId;
+        string rollupId;
+        uint256 blockNumber;
+        bytes32 blockCommitment;
+    }
+
+    // Add this struct to group distribution parameters
+    struct VaultDistribution {
+        address vault;
+        address tokenAddress;
+        address stakerRewards;
+        address operatorRewards;
+        bytes32 merkleRoot;
+        uint256 stakerAmount;
+    }
+
+
     struct StakeInfo {
         address token;
         uint256 stakeAmount;
@@ -41,6 +75,13 @@ interface IValidationServiceManager {
         bytes32 blockCommitment;
     }
 
+    struct DistributionData {
+        address[] vaultAddresses;
+        bytes32[] operatorMerkleRoots;
+        uint256[] totalStakerReward;
+        uint256[] totalOperatorReward;
+    }
+
     struct RollupTaskInfo {
         uint256 latestTaskNumber;
         
@@ -55,7 +96,7 @@ interface IValidationServiceManager {
     event SetMinimumStakeAmount(address token, uint256 minimumStakeAmount);
     event UnregisterToken(address token);
 
-    event RegisterVault(address vault);
+    event RegisterVault(address vault, address stakerRewards, address operatorRewards);
     event UnregisterVault(address vault);
 
     event RegisterOperator(address operator, address operatingAddress);
@@ -63,9 +104,20 @@ interface IValidationServiceManager {
     event UnregisterOperator(address operator);    
 
     event NewTaskCreated(string clusterId, string rollupId, uint256 referenceTaskIndex, uint256 blockNumber, bytes32 blockCommitment);
-    event TaskResponded(string clusterId, string rollupId, uint256 referenceTaskIndex, bool response);
 
-    event RewardsDistributed(string clusterId, string rollupId, uint256 operatorAmount, uint256 stakerAmount, bytes32 operatorMerkleRoot);
+
+
+    event TaskResponded(string clusterId, string rollupId, uint256 referenceTaskIndex, bool response, address responder);
+
+    event RewardsDistributed(
+        string clusterId,
+        string rollupId,
+        address indexed vault,
+        uint256 operatorAmount,
+        uint256 stakerAmount,
+        bytes32 operatorMerkleRoot
+    );
+
     event TaskThresholdMet(string clusterId, string rollupId, uint256 referenceTaskIndex);
 
 

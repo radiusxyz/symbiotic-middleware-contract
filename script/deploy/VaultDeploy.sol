@@ -24,6 +24,8 @@ contract VaultDeploy is Script, Utils {
 
         string memory output2 = readOutput(collateralDeploymentOutput);
         address defaultCollateralAddress = convertAddress(vm.parseJson(output2, ".addresses.defaultCollateral"));
+        address stETHCollateralAddress = convertAddress(vm.parseJson(output2, ".addresses.stETHCollateral"));
+        address wBTCCollateralAddress = convertAddress(vm.parseJson(output2, ".addresses.wBTCCollateral"));
 
         address[] memory networkLimitSetRoleHolders = new address[](1);
         networkLimitSetRoleHolders[0] = owner;
@@ -34,21 +36,79 @@ contract VaultDeploy is Script, Utils {
         address[] memory operatorNetworkSharesSetRoleHolders = new address[](1);
         operatorNetworkSharesSetRoleHolders[0] = owner;
 
-        (address vault, address delegator, address slasher) = IVaultConfigurator(vaultConfiguratorAddress).create(
+       // Create vault with default collateral
+        (address defaultVault, address defaultDelegator, address defaultSlasher) = createVault(
+            vaultConfiguratorAddress,
+            owner,
+            defaultCollateralAddress,
+            networkLimitSetRoleHolders,
+            operatorNetworkLimitSetRoleHolders,
+            operatorNetworkSharesSetRoleHolders
+        );
+
+        // Create vault with stETH collateral
+        (address stETHVault, address stETHDelegator, address stETHSlasher) = createVault(
+            vaultConfiguratorAddress,
+            owner,
+            stETHCollateralAddress,
+            networkLimitSetRoleHolders,
+            operatorNetworkLimitSetRoleHolders,
+            operatorNetworkSharesSetRoleHolders
+        );
+
+        // Create vault with wBTC collateral
+        (address wBTCVault, address wBTCDelegator, address wBTCSlasher) = createVault(
+            vaultConfiguratorAddress,
+            owner,
+            wBTCCollateralAddress,
+            networkLimitSetRoleHolders,
+            operatorNetworkLimitSetRoleHolders,
+            operatorNetworkSharesSetRoleHolders
+        );
+
+       vm.serializeAddress(deployedContractAddresses, "defaultVault", defaultVault);
+        vm.serializeAddress(deployedContractAddresses, "stETHVault", stETHVault);
+        vm.serializeAddress(deployedContractAddresses, "wBTCVault", wBTCVault);
+
+        vm.serializeAddress(deployedContractAddresses, "defaultDelegator", defaultDelegator);
+        vm.serializeAddress(deployedContractAddresses, "stETHDelegator", stETHDelegator);
+        vm.serializeAddress(deployedContractAddresses, "wBTCDelegator", wBTCDelegator);
+
+        vm.serializeAddress(deployedContractAddresses, "defaultSlasher", defaultSlasher);
+        vm.serializeAddress(deployedContractAddresses, "stETHSlasher", stETHSlasher);
+        string memory deployedContractAddresses_output = vm.serializeAddress(deployedContractAddresses, "wBTCSlasher", wBTCSlasher);
+
+        string memory finalJson = vm.serializeString(
+            parentObject,
+            deployedContractAddresses,
+            deployedContractAddresses_output
+        );
+
+        writeOutput(finalJson, vaultDeploymentOutput);
+        vm.stopBroadcast();
+    
+    }
+
+    function createVault(
+        address vaultConfiguratorAddress,
+        address owner,
+        address collateralAddress,
+        address[] memory networkLimitSetRoleHolders,
+        address[] memory operatorNetworkLimitSetRoleHolders,
+        address[] memory operatorNetworkSharesSetRoleHolders
+    ) internal returns (address vault, address delegator, address slasher) {
+        return IVaultConfigurator(vaultConfiguratorAddress).create(
             IVaultConfigurator.InitParams({
                 version: IMigratablesFactory(IVaultConfigurator(vaultConfiguratorAddress).VAULT_FACTORY()).lastVersion(),
                 owner: owner,
                 vaultParams: abi.encode(
                     IVault.InitParams({
-                        collateral: defaultCollateralAddress, /// TODO: tokenAddress
+                        collateral: collateralAddress,
                         burner: address(0xdEaD),
                         epochDuration: epochDuration,
-
                         depositWhitelist: depositWhitelist,
-                        
                         isDepositLimit: depositLimit != 0,
                         depositLimit: depositLimit,
-
                         defaultAdminRoleHolder: owner,
                         depositWhitelistSetRoleHolder: owner,
                         depositorWhitelistRoleHolder: owner,
@@ -85,39 +145,11 @@ contract VaultDeploy is Script, Utils {
                 slasherParams: slasherIndex == 0
                     ? new bytes(0)
                     : abi.encode(IVetoSlasher.InitParams({
-                      baseParams: IBaseSlasher.BaseParams({isBurnerHook: false}),
-                      vetoDuration: vetoDuration, 
-                      resolverSetEpochsDelay: 3
+                        baseParams: IBaseSlasher.BaseParams({isBurnerHook: false}),
+                        vetoDuration: vetoDuration,
+                        resolverSetEpochsDelay: 3
                     }))
             })
         );
-
-        vm.serializeAddress(
-            deployedContractAddresses,
-            "vault",
-            vault
-        );
-
-        vm.serializeAddress(
-            deployedContractAddresses,
-            "slasher",
-            slasher
-        );
-
-        string memory deployedContractAddresses_output = vm.serializeAddress(
-            deployedContractAddresses,
-            "delegator",
-            delegator
-        );
-
-        string memory finalJson = vm.serializeString(
-            parentObject,
-            deployedContractAddresses,
-            deployedContractAddresses_output
-        );
-
-        writeOutput(finalJson, vaultDeploymentOutput);
-
-        vm.stopBroadcast();
     }
 }
