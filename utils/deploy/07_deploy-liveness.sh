@@ -11,4 +11,4 @@ fi
 
 cd $PROJECT_ROOT_PATH
 
-forge script script/deploy/LivenessRadiusDeployer.sol:LivenessRadiusDeployer --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv
+forge script script/deploy/LivenessServiceManagerDeploy.sol:LivenessServiceManagerDeploy --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv

@@ -4,23 +4,23 @@ pragma solidity 0.8.25;
 import {Utils} from "../utils/Utils.sol";
 
 import {Script} from "forge-std/src/Script.sol";
-import {LivenessRadius} from "src/liveness/LivenessRadius.sol";
+import {LivenessServiceManager} from "src/liveness/LivenessServiceManager.sol";
 
 import {INetworkRegistry} from "@symbiotic-core/src/interfaces/INetworkRegistry.sol";
 import {IOperatorRegistry} from "@symbiotic-core/src/interfaces/IOperatorRegistry.sol";
 import {IOptInService} from "@symbiotic-core/src/interfaces/service/IOptInService.sol";
 import {IVault} from "@symbiotic-core/src/interfaces/vault/IVault.sol";
 
-contract LivenessRadiusDeployer is Script, Utils {
+contract LivenessServiceManagerDeploy is Script, Utils {
     function run() external {
         vm.startBroadcast();
 
-        LivenessRadius livenessRadius = new LivenessRadius();
+        LivenessServiceManager livenessServiceManager = new LivenessServiceManager();
 
         string memory deployedContractAddresses_output = vm.serializeAddress(
             deployedContractAddresses,
-            "livenessRadius",
-            address(livenessRadius)
+            "livenessServiceManager",
+            address(livenessServiceManager)
         );
 
         string memory finalJson = vm.serializeString(
@@ -29,7 +29,7 @@ contract LivenessRadiusDeployer is Script, Utils {
             deployedContractAddresses_output
         );
 
-        writeOutput(finalJson, livenessRadiusDeploymentOutput);
+        writeOutput(finalJson, livenessServiceManagerDeploymentOutput);
 
         vm.stopBroadcast();
     }
