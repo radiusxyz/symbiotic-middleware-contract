@@ -5,5 +5,4 @@ lib/.DS_Store
 cache
 out
 broadcast
-test_scripts
 latest-state/31337/*
