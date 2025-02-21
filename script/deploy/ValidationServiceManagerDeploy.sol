@@ -11,7 +11,7 @@ import {IOperatorRegistry} from "@symbiotic-core/src/interfaces/IOperatorRegistr
 import {IOptInService} from "@symbiotic-core/src/interfaces/service/IOptInService.sol";
 import {IVault} from "@symbiotic-core/src/interfaces/vault/IVault.sol";
 
-contract ValidationServiceManagerDeployer is Script, Utils {
+contract ValidationServiceManagerDeploy is Script, Utils {
     function run() external {
         vm.startBroadcast();
 
@@ -21,11 +21,11 @@ contract ValidationServiceManagerDeployer is Script, Utils {
         address operatorNetworkOptInServiceAddress = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.operatorNetworkOptInService"));
         
         string memory operatorRewardOutput = readOutput(operatorRewardDeploymentOutput);
-        string memory stakerRewardOutput = readOutput(stakerRewardDeploymentOutputstring);
+        string memory stakerRewardOutput = readOutput(stakerRewardDeploymentOutput);
         string memory rewardsCoreOutput = readOutput(rewardsCoreDeploymentOutput);
 
-        address stakerRewardAddress = convertAddress(vm.parseJson(stakerRewardOutput, ".addresses.stakerReward"));
-        address operatorRewardAddress = convertAddress(vm.parseJson(operatorRewardOutput, ".addresses.operatorReward"));
+        address stakerRewardRegistry = convertAddress(vm.parseJson(stakerRewardOutput, ".addresses.defaultStakerRewardsFactory"));
+        address operatorRewardRegistry = convertAddress(vm.parseJson(operatorRewardOutput, ".addresses.defaultOperatorRewardsFactory"));
         address rewardsCoreAddress = convertAddress( vm.parseJson(rewardsCoreOutput, ".addresses.rewardsCore"));
        
 
@@ -34,8 +34,8 @@ contract ValidationServiceManagerDeployer is Script, Utils {
             vaultRegistry, 
             operatorNetworkOptInServiceAddress, 
             validationServiceManagerEpochDuration, 
-            stakerRewardAddress,
-            operatorRewardAddress,
+            stakerRewardRegistry,
+            operatorRewardRegistry,
             rewardsCoreAddress
 
         );
