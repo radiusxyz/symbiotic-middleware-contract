@@ -5,7 +5,7 @@ source $SCRIPT_PATH/env.sh
 cd "$SCRIPT_PATH"/..
 
 # Deploy Liveness Contract
-# forge script script/deploy/holesky/LivenessRadiusHoleskyDeploy.sol:LivenessRadiusHoleskyDeploy \
+# forge script script/deploy/holesky/LivenessServiceManagerHoleskyDeploy.sol:LivenessServiceManagerHoleskyDeploy \
 # --rpc-url $RPC_URL --private-key $RADIUS_PRIVATE_KEY --broadcast -vvvv
 
 # # Deploy Collateral
