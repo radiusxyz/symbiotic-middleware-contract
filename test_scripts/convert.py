@@ -26,14 +26,14 @@ def convert_fish_to_bash(fish_file_content):
 def main():
     # Read input file
     try:
-        with open('env.fish', 'r') as file:
+        with open('local_l1.fish', 'r') as file:
             fish_content = file.read()
         
         # Convert to bash format
         bash_content = convert_fish_to_bash(fish_content)
         
         # Write output file
-        with open('env.bash', 'w') as file:
+        with open('local_l1.sh', 'w') as file:
             file.write(bash_content)
             
         print("Successfully converted env.fish to env.bash")

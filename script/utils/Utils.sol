@@ -40,7 +40,7 @@ contract Utils is Script {
     address public rewardsManagerAddress = address(0x723a4cbDAaCEb02A830d1Bbe6f318939a304c266);
 
     // Related to middlewareDeploy
-    address public network = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+    address public network = address(0x045D9E0E4c88735ae6c4614E077593c6b0e32c33);
     uint48 public validationServiceManagerEpochDuration = 12;
     uint48 public minSlashingWindow = validationServiceManagerEpochDuration; // we dont use this
 

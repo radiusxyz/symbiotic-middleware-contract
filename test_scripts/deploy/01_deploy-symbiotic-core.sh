@@ -12,7 +12,9 @@ mkdir -p $LATEST_STATE_PATH/$CHAIN_ID
 
 cd $PROJECT_ROOT_PATH
 
-echo "HOLEYSKY"
+echo "LOCAL L1"
 echo $PRIVATE_KEY
+
+echo $RPC_URL
 
 forge script script/deploy/SymbioticCoreDeploy.sol:SymbioticCoreDeploy --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv
