@@ -734,7 +734,7 @@ function _distributeToVaults(
     function respondToTask(
         string calldata clusterId,
         string calldata rollupId,
-        uint32 referenceTaskIndex,
+        u256 referenceTaskIndex,
         bool response
     ) external {
         require(checkIncludingOperatingAddress(msg.sender) == true, "Operator is not registered");
