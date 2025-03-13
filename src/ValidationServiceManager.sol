@@ -576,114 +576,113 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
     }
 
 
-function createNewTask(
-    TaskParams calldata taskParams,
-    DistributionParams calldata distributionParams
-) external {
-    console.log("================== createNewTask START ==================");
-    console.log("Caller address:", msg.sender);
-    uint32 loop_indx = 1;
-    console.log("Loop Index: ", loop_indx);
+    function createNewTask(
+        TaskParams calldata taskParams,
+        DistributionParams calldata distributionParams
+    ) external {
+        console.log("================== createNewTask START ==================");
+        console.log("Caller address:", msg.sender);
+      
 
-    require(checkIncludingOperatingAddress(msg.sender), "Operator not registered");
+        require(checkIncludingOperatingAddress(msg.sender), "Operator not registered");
 
-    uint256 latestTaskNumber = rollupTaskInfos[taskParams.rollupId].latestTaskNumber;
-    rollupTaskInfos[taskParams.rollupId].latestTaskNumber = latestTaskNumber + 1;
-    rollupTaskInfos[taskParams.rollupId].blockCommitments[latestTaskNumber] = taskParams.blockCommitment;
+        uint256 latestTaskNumber = rollupTaskInfos[taskParams.rollupId].latestTaskNumber;
+        rollupTaskInfos[taskParams.rollupId].latestTaskNumber = latestTaskNumber + 1;
+        rollupTaskInfos[taskParams.rollupId].blockCommitments[latestTaskNumber] = taskParams.blockCommitment;
 
-    Task memory newTask = Task({
-        clusterId: taskParams.clusterId,
-        rollupId: taskParams.rollupId,
-        blockNumber: taskParams.blockNumber,
-        blockCommitment: taskParams.blockCommitment
-    });
+        Task memory newTask = Task({
+            clusterId: taskParams.clusterId,
+            rollupId: taskParams.rollupId,
+            blockNumber: taskParams.blockNumber,
+            blockCommitment: taskParams.blockCommitment
+        });
 
-    bytes32 taskHash = keccak256(abi.encode(newTask));
-    rollupTaskInfos[taskParams.rollupId].taskHash[latestTaskNumber] = taskHash;
+        bytes32 taskHash = keccak256(abi.encode(newTask));
+        rollupTaskInfos[taskParams.rollupId].taskHash[latestTaskNumber] = taskHash;
 
-    emit NewTaskCreated(taskParams.clusterId, taskParams.rollupId, latestTaskNumber, taskParams.blockNumber, taskParams.blockCommitment );
-    console.log("Emitted NewTaskCreated event");
+        emit NewTaskCreated(taskParams.clusterId, taskParams.rollupId, latestTaskNumber, taskParams.blockNumber, taskParams.blockCommitment );
+        console.log("Emitted NewTaskCreated event");
 
-    if (latestTaskNumber > 0 && distributionParams.operatorMerkleRoots.length > 0) {
-        _storeDistributionData(taskParams.clusterId, taskParams.rollupId, latestTaskNumber, distributionParams);
+        if (latestTaskNumber > 0 && distributionParams.operatorMerkleRoots.length > 0) {
+            _storeDistributionData(taskParams.clusterId, taskParams.rollupId, distributionParams.rewardedTaskindex, distributionParams);
+            
+        } else {
+            console.log("\nSkipping distributions - conditions not met.");
+        }
+
+        console.log("================== createNewTask END ==================");
+
+    }
+
+    function _storeDistributionData(
+        string calldata clusterId,
+        string calldata rollupId,
+        uint256 rewardedTaskindex,
+        DistributionParams calldata distributionParams
+    ) internal {
+        DistributionData storage data = distributionDataByTask[clusterId][rollupId][rewardedTaskindex];
+        data.vaultAddresses = distributionParams.vaultAddresses;
+        data.operatorMerkleRoots = distributionParams.operatorMerkleRoots;
+        data.totalStakerReward = distributionParams.totalStakerReward;
+        data.totalOperatorReward = distributionParams.totalOperatorReward;
+        data.distributed = false;   
+        emit DistributionDataSaved(clusterId, rollupId, rewardedTaskindex);
+    }
+
+    function _processDistributions(
+        string calldata clusterId,
+        string calldata rollupId,
+        uint256 rewardedTaskindex,
+        address rewardToken
+    ) internal {
+        DistributionData storage data = distributionDataByTask[clusterId][rollupId][rewardedTaskindex];
+        uint48 oneSecondAgo = uint48(block.timestamp - 5);
+
+       
+        uint256 vaultCount = data.vaultAddresses.length;
+        uint256 totalRewardsRequired = 0;
         
-    } else {
-        console.log("\nSkipping distributions - conditions not met.");
-    }
+        for (uint256 i = 0; i < vaultCount; i++) {
+            uint256 vaultTotalReward = data.totalStakerReward[i] + data.totalOperatorReward[i];
+            totalRewardsRequired += vaultTotalReward;
+        }
 
-    console.log("================== createNewTask END ==================");
-        loop_indx = loop_indx + 1;
+            uint256 approvedAmount = IRewardsCore(REWARDS_MANAGER)
+            .approveRewardDistribution(NETWORK, clusterId, rollupId, totalRewardsRequired);
+        console.log("Approved amount:", approvedAmount);
 
-}
-
-// Store distribution data separately
-function _storeDistributionData(
-    string calldata clusterId,
-    string calldata rollupId,
-    uint256 latestTaskNumber,
-    DistributionParams calldata distributionParams
-) internal {
-    DistributionData storage data = distributionDataByTask[clusterId][rollupId][latestTaskNumber];
-    data.vaultAddresses = distributionParams.vaultAddresses;
-    data.operatorMerkleRoots = distributionParams.operatorMerkleRoots;
-    data.totalStakerReward = distributionParams.totalStakerReward;
-    data.totalOperatorReward = distributionParams.totalOperatorReward;
-}
-
-// Process distributions
-function _processDistributions(
-    string calldata clusterId,
-    string calldata rollupId,
-    uint256 referenceTaskIndex
-) internal {
-    DistributionData storage data = distributionDataByTask[clusterId][rollupId][referenceTaskIndex];
-    uint48 oneSecondAgo = uint48(block.timestamp - 5);
-
-    (
-        bool isEligible,
-        uint256 availableAmount,
-        address rewardToken,
-        uint256 timeUntilNextDistribution,
-        uint256 operatorAmount,
-        uint256 stakerAmount
-    ) = IRewardsCore(REWARDS_MANAGER).getDistributionInfo(clusterId, rollupId);
-
-    console.log("Distribution info received from rewards manager.");
-
-    uint256 approvedAmount = IRewardsCore(REWARDS_MANAGER)
-        .approveRewardDistribution(NETWORK, clusterId, rollupId);
-    console.log("Approved amount:", approvedAmount);
-
-    IERC20(rewardToken).safeTransferFrom(
-        REWARDS_MANAGER,
-        address(this),
-        availableAmount
-    );
-    console.log("Transferred rewards from manager");
-
-    _distributeToVaults(rewardToken, data, oneSecondAgo);
-
-    delete distributionDataByTask[clusterId][rollupId][referenceTaskIndex];
-}
-
-// Distribute rewards to each vault
-function _distributeToVaults(
-    address rewardToken,
-    DistributionData storage data,
-    uint48 oneSecondAgo
-) internal {
-    uint256 vaultCount = data.vaultAddresses.length;
-    for (uint256 i = 0; i < vaultCount; i++) {
-        _processVaultDistribution(
-            rewardToken,
-            data.vaultAddresses[i],
-            data.operatorMerkleRoots[i],
-            data.totalStakerReward[i],
-            data.totalOperatorReward[i],
-            oneSecondAgo
+        IERC20(rewardToken).safeTransferFrom(
+            REWARDS_MANAGER,
+            address(this),
+            approvedAmount
         );
+        console.log("Transferred rewards from manager");
+
+        _distributeToVaults(rewardToken, data, oneSecondAgo);
+
+
+        // We don't delete the data anymore, just mark as distributed
+        // data.distributed = true is set in the calling function
     }
-}
+
+    // Distribute rewards to each vault
+    function _distributeToVaults(
+        address rewardToken,
+        DistributionData storage data,
+        uint48 oneSecondAgo
+    ) internal {
+        uint256 vaultCount = data.vaultAddresses.length;
+        for (uint256 i = 0; i < vaultCount; i++) {
+            _processVaultDistribution(
+                rewardToken,
+                data.vaultAddresses[i],
+                data.operatorMerkleRoots[i],
+                data.totalStakerReward[i],
+                data.totalOperatorReward[i],
+                oneSecondAgo
+            );
+        }
+    }
      
     function _processVaultDistribution(
         address rewardToken,
@@ -726,47 +725,106 @@ function _distributeToVaults(
         }
     }
 
+    function executeDistributions(
+    string calldata clusterId,
+    string calldata rollupId
+    ) external nonReentrant {
+        console.log("Executing distributions for cluster:", clusterId);
+        console.log("Executing distributions for rollup:", rollupId);
+
+          (
+            bool isEligible,
+            uint256 availableAmount,
+            address rewardToken,
+            uint256 timeUntilNextDistribution,
+            uint256 operatorAmount,
+            uint256 stakerAmount
+        ) = IRewardsCore(REWARDS_MANAGER).getDistributionInfo(clusterId, rollupId);
+
+        console.log("Distribution info received from rewards manager.");
+         console.log("isEligible:", isEligible);
+         console.log("availableAmount:", availableAmount);
+         console.log("rewardToken:", rewardToken);
+         console.log("timeUntilNextDistribution:", timeUntilNextDistribution);
+         console.log("operatorAmount:", operatorAmount);
+         console.log("stakerAmount:", stakerAmount);
+
+         if (!isEligible){
+            console.log("Not Eligible for Distribution");
+            revert IRewardsCore.TooEarlyForDistribution();
+        }
+
+        uint256 taskCount = rollupTaskInfos[rollupId].latestTaskNumber + 1;
+        uint256 distributedCount = 0;
+        
+        // First check if any distributions are pending
+        bool hasPendingDistributions = false;
+        for (uint256 i = 0; i < taskCount && !hasPendingDistributions; i++) {
+            DistributionData storage data = distributionDataByTask[clusterId][rollupId][i];
+            if (data.vaultAddresses.length > 0 && !data.distributed && 
+                rollupTaskInfos[rollupId].taskTotalResponseCount[i] >= 5) {
+                hasPendingDistributions = true;
+            }
+        }
+        
+        require(hasPendingDistributions, "No pending distributions to execute");
+        
+        for (uint256 i = 0; i < taskCount; i++) {
+            DistributionData storage data = distributionDataByTask[clusterId][rollupId][i];
+            
+            if (data.vaultAddresses.length == 0 || data.distributed) {
+                continue;
+            }
+            
+            console.log("Processing distribution for task:", i);
+        
+            _processDistributions(clusterId, rollupId, i, rewardToken);
+            // Emit event specifying both the task that generated the rewards and the task where the rewards were included
+            emit RewardsDistributed(clusterId, rollupId, i);
+            // Mark as distributed
+            data.distributed = true;
+            distributedCount++;
+        }
+
+        // IRewardsCore(REWARDS_MANAGER)
+        //     .updateLastDistribution(NETWORK, clusterId, rollupId);
+      
+    }
 
 
-    uint256 public lastEmitTime;
-    uint256 public constant EMIT_DELAY = 1; // 1 second
+
+    // uint256 public lastEmitTime;
+    // uint256 public constant EMIT_DELAY = 1; // 1 second
 
     function respondToTask(
         string calldata clusterId,
         string calldata rollupId,
         uint256 referenceTaskIndex,
         bool response
-    ) external {
-        require(checkIncludingOperatingAddress(msg.sender) == true, "Operator is not registered");
-        require(
-            rollupTaskInfos[rollupId].taskResponses[msg.sender][referenceTaskIndex] == false,
-            "Operator has already responded to the task"
-        );
-
-        rollupTaskInfos[rollupId].taskResponses[msg.sender][referenceTaskIndex] = response;
-        rollupTaskInfos[rollupId].taskTotalResponseCount[referenceTaskIndex]++;
-
-        emit TaskResponded(clusterId, rollupId, referenceTaskIndex, response, msg.sender);
-            
-        if (rollupTaskInfos[rollupId].taskTotalResponseCount[referenceTaskIndex] == 5) {
+        ) external {
+            require(checkIncludingOperatingAddress(msg.sender) == true, "Operator is not registered");
             require(
-                block.timestamp >= lastEmitTime + EMIT_DELAY,
-                "Must wait for delay period"
+                rollupTaskInfos[rollupId].taskResponses[msg.sender][referenceTaskIndex] == false,
+                "Operator has already responded to the task"
             );
-            lastEmitTime = block.timestamp;
-            emit TaskThresholdMet(clusterId, rollupId, referenceTaskIndex);
 
-            // Check if there's distribution data before processing
-            DistributionData storage data = distributionDataByTask[clusterId][rollupId][referenceTaskIndex];
-            
-            // Only process distributions if there are vault addresses stored
-            if (data.vaultAddresses.length > 0) {
-                _processDistributions(clusterId, rollupId, referenceTaskIndex);
-            }
-        }
+            rollupTaskInfos[rollupId].taskResponses[msg.sender][referenceTaskIndex] = response;
+            rollupTaskInfos[rollupId].taskTotalResponseCount[referenceTaskIndex]++;
+
+            emit TaskResponded(clusterId, rollupId, referenceTaskIndex, response, msg.sender);
+                
+            // if (rollupTaskInfos[rollupId].taskTotalResponseCount[referenceTaskIndex] == 5) {
+            //     require(
+            //         block.timestamp >= lastEmitTime + EMIT_DELAY,
+            //         "Must wait for delay period"
+            //     );
+            //     lastEmitTime = block.timestamp;
+            //     emit TaskThresholdMet(clusterId, rollupId, referenceTaskIndex);
+            // }
     }
 
-function getDistributionData(
+
+    function getDistributionData(
         string memory clusterId,
         string memory rollupId,
         uint256 referenceTaskId
@@ -841,7 +899,6 @@ function getDistributionData(
             revert InvalidEpoch();
         }
     }
- 
 
     /**
      * @notice Safely approves tokens with protection against approval race conditions
@@ -854,120 +911,6 @@ function getDistributionData(
         // Using forceApprove which safely handles approvals without requiring a reset
         SafeERC20.safeIncreaseAllowance(IERC20(token), spender, amount);
     }
-    /**
-     * @notice Distributes rewards for a given cluster and rollup
-     * @dev Only callable by the network middleware
-     */
-    // function distributeRewards(
-    // string calldata clusterId,
-    // string calldata rollupId,
-    // address network,
-    // bytes32 operatorMerkleRoot,
-    // uint48 stakerTimestamp,
-    // bytes memory activeSharesHint,
-    // bytes memory activeStakeHint,
-    // uint256 maxAdminFee
-    // ) external nonReentrant {
-    //     console.log("Starting distributeRewards for cluster:", clusterId);
-    //     console.log("Starting distributeRewards for rollup:", rollupId);
-
-    //     console.log("Network address:", network);
-        
-    //     // Check if reward pool exists and is eligible for distribution
-    //     (
-    //         bool isEligible,
-    //         uint256 availableAmount,
-    //         address rewardToken,
-    //         uint256 timeUntilNextDistribution,
-    //         uint256 operatorAmount,
-    //         uint256 stakerAmount
-    //     ) = IRewardsCore(REWARDS_MANAGER).getDistributionInfo(
-    //             clusterId,
-    //             rollupId
-    //         );
-        
-    //     console.log("Distribution info - Eligible:", isEligible);
-    //     console.log("Available amount:", availableAmount);
-    //     console.log("Reward token:", rewardToken);
-    //     console.log("Time until next distribution:", timeUntilNextDistribution);
-
-    //     require(isEligible, "Not eligible for distribution");
-    //     require(availableAmount > 0, "No rewards available");
-
-    //     // Get approval from RewardsCore for exact amount
-    //     uint256 approvedAmount = IRewardsCore(REWARDS_MANAGER)
-    //         .approveRewardDistribution(network, clusterId, rollupId);
-        
-    //     console.log("Approved amount:", approvedAmount);
- 
-    //     console.log("Operator amount (70%):", operatorAmount);
-    //     console.log("Staker amount (30%):", stakerAmount);
-
-    //     // Transfer and distribute operator rewards
-    //     if (operatorAmount > 0) {
-    //         console.log("Processing operator rewards transfer");
-    //         IERC20(rewardToken).safeTransferFrom(
-    //             REWARDS_MANAGER,
-    //             address(this),
-    //             operatorAmount
-    //         );
-
-    //         _safeTokenApprove(rewardToken, DEFAULT_OPERATOR_REWARDS, operatorAmount);
-    //         console.log("Approved operator rewards contract to spend:", operatorAmount);
-
-    //         console.log("rewardToken: ", rewardToken);
-
-    //         console.log("DEFAULT_OPERATOR_REWARDS: ", DEFAULT_OPERATOR_REWARDS);
-
-
-    //         IDefaultOperatorRewards(DEFAULT_OPERATOR_REWARDS).distributeRewards(
-    //             network,
-    //             rewardToken,
-    //             operatorAmount,
-    //             operatorMerkleRoot
-    //         );
-    //         console.log("Operator rewards distributed successfully");
-    //     }
-
-    //     // Transfer and distribute staker rewards
-    //     if (stakerAmount > 0) {
-    //         console.log("Processing staker rewards transfer");
-    //         IERC20(rewardToken).safeTransferFrom(
-    //             REWARDS_MANAGER,
-    //             address(this),
-    //             stakerAmount
-    //         );
-
-    //         _safeTokenApprove(rewardToken, DEFAULT_STAKER_REWARDS, stakerAmount);
-    //         console.log("Approved staker rewards contract to spend:", stakerAmount);
-    //         console.log("stakerTimestamp:", stakerTimestamp);
-    //         console.log("maxAdminFee:", maxAdminFee);
-    //         console.log("activeSharesHint:", string(activeSharesHint));
-    //         console.log("activeStakeHint:", string(activeStakeHint));
-
-    //         IDefaultStakerRewards(DEFAULT_STAKER_REWARDS).distributeRewards(
-    //             network,
-    //             rewardToken,
-    //             stakerAmount,
-    //             abi.encode(
-    //                 stakerTimestamp,
-    //                 maxAdminFee,
-    //                 activeSharesHint,
-    //                 activeStakeHint
-    //             )
-    //         );
-    //         console.log("Staker rewards distributed successfully");
-    //     }
-
-    //     console.log("Rewards distribution completed successfully");
-    //     emit RewardsDistributed(
-    //         clusterId,
-    //         rollupId,
-    //         operatorAmount,
-    //         stakerAmount,
-    //         operatorMerkleRoot
-    //     );
-    // }
 
 }
 

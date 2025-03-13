@@ -31,6 +31,7 @@ interface IValidationServiceManager {
     }
 
     struct DistributionParams {
+        uint256 rewardedTaskindex;
         address[] vaultAddresses;
         bytes32[] operatorMerkleRoots;
         uint256[] totalStakerReward;
@@ -80,6 +81,7 @@ interface IValidationServiceManager {
         bytes32[] operatorMerkleRoots;
         uint256[] totalStakerReward;
         uint256[] totalOperatorReward;
+        bool distributed;  // Added this field
     }
 
     struct RollupTaskInfo {
@@ -109,16 +111,11 @@ interface IValidationServiceManager {
 
     event TaskResponded(string clusterId, string rollupId, uint256 referenceTaskIndex, bool response, address responder);
 
-    event RewardsDistributed(
-        string clusterId,
-        string rollupId,
-        address indexed vault,
-        uint256 operatorAmount,
-        uint256 stakerAmount,
-        bytes32 operatorMerkleRoot
-    );
+    event RewardsDistributed(string clusterId, string rollupId, uint256 referenceTaskIndex);
 
     event TaskThresholdMet(string clusterId, string rollupId, uint256 referenceTaskIndex);
+    event DistributionDataSaved(string clusterId, string rollupId, uint256 rewardedTaskindex);
+
 
 
 }

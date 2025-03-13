@@ -44,13 +44,6 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         NETWORK_MIDDLEWARE_SERVICE = _networkMiddlewareService;
     }
 
-    function _validateString(string calldata str) internal pure {
-        uint256 length = bytes(str).length;
-        if (length == 0 || length > MAX_STRING_LENGTH) {
-            revert StringInvalid(length, MAX_STRING_LENGTH);
-        }
-    }
-
 
     function _getRewardKey(
         string calldata clusterId,
@@ -62,10 +55,9 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
     function approveRewardDistribution(
         address network,
         string calldata clusterId,
-        string calldata rollupId
+        string calldata rollupId,
+        uint256 approvalAmount
     ) external nonReentrant whenNotPaused returns (uint256) {
-        _validateString(clusterId);
-        _validateString(rollupId);
 
         address middleware = INetworkMiddlewareService(
             NETWORK_MIDDLEWARE_SERVICE
@@ -77,36 +69,52 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
 
         if (!config.isActive) revert ConfigNotActive();
-        if (
-            block.timestamp <
-            config.lastDistribution + config.distributionInterval
-        ) revert TooEarlyForDistribution();
+        // if (
+        //     block.timestamp <
+        //     config.lastDistribution + config.distributionInterval
+        // ) revert TooEarlyForDistribution();
 
         uint256 currentPoolBalance = rewardPools[rewardKey];
-        if (currentPoolBalance < config.amountPerInterval)
+        if (currentPoolBalance < approvalAmount)
             revert InsufficientPoolBalance(
                 currentPoolBalance,
-                config.amountPerInterval
+                approvalAmount
             );
 
         // Update state
-        rewardPools[rewardKey] -= config.amountPerInterval;
-        config.lastDistribution = block.timestamp;
+        rewardPools[rewardKey] -= approvalAmount;
+        // config.lastDistribution = block.timestamp;
 
         // Use safeIncreaseAllowance
         IERC20(config.rewardToken).safeIncreaseAllowance(
             msg.sender,
-            config.amountPerInterval
+            approvalAmount
         );
 
         emit RewardDistributionApproved(
             clusterId,
             rollupId,
-            config.amountPerInterval,
+            approvalAmount,
             block.timestamp
         );
 
-        return config.amountPerInterval;
+        return approvalAmount;
+    }
+
+    function updateLastDistribution(
+        address network,
+        string calldata clusterId,
+        string calldata rollupId
+    ) external nonReentrant whenNotPaused {
+        address middleware = INetworkMiddlewareService(
+            NETWORK_MIDDLEWARE_SERVICE
+        ).middleware(network);
+        if (middleware != msg.sender)
+            revert InvalidMiddleware(msg.sender, middleware);
+        bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
+        RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
+        if (!config.isActive) revert ConfigNotActive();
+        config.lastDistribution = block.timestamp;
     }
 
     function getDistributionInfo(
@@ -137,22 +145,22 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
 
         isEligible =
             block.timestamp >= nextDistribution &&
-            poolBalance >= config.amountPerInterval;
+            poolBalance >= config.amounterPerTask;
 
         timeUntilNextDistribution = block.timestamp >= nextDistribution
             ? 0
             : nextDistribution - block.timestamp;
 
         operatorAmount =
-            (config.amountPerInterval * config.operatorRewardRatio) /
+            (config.amounterPerTask * config.operatorRewardRatio) /
             100;
         stakerAmount =
-            (config.amountPerInterval * config.stakerRewardRatio) /
+            (config.amounterPerTask * config.stakerRewardRatio) /
             100;
 
         return (
             isEligible,
-            config.amountPerInterval,
+            config.amounterPerTask,
             config.rewardToken,
             timeUntilNextDistribution,
             operatorAmount,
@@ -164,18 +172,16 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         string calldata clusterId,
         string calldata rollupId,
         address rewardToken,
-        uint256 amountPerInterval,
+        uint256 amounterPerTask,
         uint256 distributionInterval,
         uint256 operatorRewardRatio,
         uint256 stakerRewardRatio
     ) external whenNotPaused {
-        _validateString(clusterId);
-        _validateString(rollupId);
 
-        if (amountPerInterval < MIN_REWARD_AMOUNT)
-            revert AmountTooLow(amountPerInterval, MIN_REWARD_AMOUNT);
-        if (amountPerInterval > MAX_REWARD_AMOUNT)
-            revert AmountTooHigh(amountPerInterval, MAX_REWARD_AMOUNT);
+        if (amounterPerTask < MIN_REWARD_AMOUNT)
+            revert AmountTooLow(amounterPerTask, MIN_REWARD_AMOUNT);
+        if (amounterPerTask > MAX_REWARD_AMOUNT)
+            revert AmountTooHigh(amounterPerTask, MAX_REWARD_AMOUNT);
         if (rewardToken == address(0)) revert ZeroAddress();
         if (distributionInterval < MIN_DISTRIBUTION_INTERVAL)
             revert IntervalTooShort(
@@ -205,7 +211,7 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
 
         rewardPoolConfigs[rewardKey] = RewardPoolConfig({
             rewardToken: rewardToken,
-            amountPerInterval: amountPerInterval,
+            amounterPerTask: amounterPerTask,
             distributionInterval: distributionInterval,
             lastDistribution: block.timestamp,
             operatorRewardRatio: operatorRewardRatio,
@@ -216,28 +222,28 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         whitelistedDepositorList[rewardKey].push(msg.sender);
         isWhitelistedDepositor[rewardKey][msg.sender] = true;
 
-        emit RewardPoolConfigAdded(clusterId, rollupId, rewardToken);
+        emit RewardPoolConfigAdded(clusterId, rollupId, rewardToken, distributionInterval);
     }
 
     function updateRewardPoolConfig(
         string calldata clusterId,
         string calldata rollupId,
         uint256 newDistributionInterval,
-        uint256 newAmountPerInterval,
+        uint256 newAmounterPerTask,
         uint256 newOperatorRewardRatio,
         uint256 newStakerRewardRatio
     ) external whenNotPaused {
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
         RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
         if (!config.isActive) revert ConfigNotActive();
-        if (newAmountPerInterval == 0) revert InvalidNewAmountPerInterval();
+        if (newAmounterPerTask == 0) revert InvalidNewAmounterPerTask();
         if (newDistributionInterval < MIN_DISTRIBUTION_INTERVAL) 
             revert InvalidNewDistributionInterval(newDistributionInterval, MIN_DISTRIBUTION_INTERVAL);
         if (newOperatorRewardRatio + newStakerRewardRatio != 100) 
             revert InvalidNewRewardRatios(newOperatorRewardRatio, newStakerRewardRatio);
 
         config.distributionInterval = newDistributionInterval;
-        config.amountPerInterval = newAmountPerInterval;
+        config.amounterPerTask = newAmounterPerTask;
         config.operatorRewardRatio = newOperatorRewardRatio;
         config.stakerRewardRatio = newStakerRewardRatio;
 
@@ -245,7 +251,7 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
             clusterId,
             rollupId,
             newDistributionInterval,
-            newAmountPerInterval,
+            newAmounterPerTask,
             newOperatorRewardRatio,
             newStakerRewardRatio
         );
@@ -256,8 +262,6 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         string calldata rollupId,
         uint256 amount
     ) external nonReentrant whenNotPaused {
-        _validateString(clusterId);
-        _validateString(rollupId);
 
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
         if (!isWhitelistedDepositor[rewardKey][msg.sender])
@@ -266,7 +270,7 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
         if (!config.isActive) revert ConfigNotActive();
 
-        uint256 minimumRequired = config.amountPerInterval * POOL_MULTIPLIER;
+        uint256 minimumRequired = config.amounterPerTask * POOL_MULTIPLIER;
 
         uint256 newBalance = rewardPools[rewardKey] + amount;
         if (newBalance < rewardPools[rewardKey]) revert OverflowDetected();
@@ -293,8 +297,6 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         string calldata rollupId,
         uint256 amount
     ) external onlyOwner nonReentrant whenNotPaused {
-        _validateString(clusterId);
-        _validateString(rollupId);
 
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
         RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
@@ -304,7 +306,7 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         if (amount == 0 || amount > currentBalance)
             revert InvalidAmount(amount, currentBalance);
 
-        uint256 minimumRequired = config.amountPerInterval *
+        uint256 minimumRequired = config.amounterPerTask *
             POOL_MULTIPLIER *
             2;
         uint256 maxWithdrawal = currentBalance > minimumRequired
