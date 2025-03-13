@@ -23,7 +23,7 @@
 
 
 
-./multi_token_exports_local_l1.py > local_l1.fish
+./multi_token_exports_local_l1.py > L1_MARCH6.fish
 
 
 # source env.fish

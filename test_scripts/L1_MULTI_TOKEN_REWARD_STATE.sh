@@ -12,6 +12,8 @@ cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY --value 1ether $STETH_OP
 cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY --value 1ether $WBTC_OPERATOR_ADDRESS_SECONDARY
 cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY --value 1ether $STETH_OPERATOR_ADDRESS_SECONDARY
 
+cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY --value 10ether $REWARDS_MANAGER_ACCOUNT_ADDRESSS
+
 
 # # WBTC Token Setup
 cast send $WBTC_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
@@ -304,7 +306,7 @@ cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $STETH_OPE
 
 # # # Setup Rewards
 cast send $REWARDS_CORE_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"addRewardPoolConfig(string,string,address,uint256,uint256,uint256,uint256)" $CLUSTER_ID $ROLLUP_ID $DEFAULT_TOKEN_ADDRESS 10000000000000000000 10 70 30
+"addRewardPoolConfig(string,string,address,uint256,uint256,uint256,uint256)" $CLUSTER_ID $ROLLUP_ID $DEFAULT_TOKEN_ADDRESS 10000000000000000000 60 70 30
 
 # cast send $DEFAULT_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 # "approve(address,uint256)" $REWARD_SYSTEM_ADDRESS 50000000000000000000

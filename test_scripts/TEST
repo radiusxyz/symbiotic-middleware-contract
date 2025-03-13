@@ -311,8 +311,8 @@ cast send $STETH_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,
 $STETH_OPERATOR_ADDRESS \
 $NETWORK_ADDRESS \
 $DEFAULT_TOKEN_ADDRESS \
-3000000000000000000 \
-"[0x9543eb0d43cff4872c9a627d355e02990db82a37882ef80abaca5a7fc41cffc9]" \
+2432582591552661449 \
+"[0x6f009a959415c943c3ac2e168680b19416408a1c3796fcae962b198b7a894df1]" \
 --rpc-url $RPC_URL \
 --private-key $STETH_OPERATOR_PRIVATE_KEY
 
@@ -322,10 +322,45 @@ cast send $DEFAULT_OPERATOR_REWARDS "claimRewards(address,address,address,uint25
 $DEFAULT_OPERATOR_ADDRESS \
 $NETWORK_ADDRESS \
 $DEFAULT_TOKEN_ADDRESS \
-1707472309472640105 \
-"[0x3ba86b4bec7ad722e160376560c09bf9e25bd82fbf347516c199ab64065de7b1]" \
+118917785234899328 \
+"[0xd09e30fec815ef055a18bd70102a10958215de8c0c53c0d00a9a21dfdc8ddd5c]" \
 --rpc-url $RPC_URL \
 --private-key $DEFAULT_OPERATOR_PRIVATE_KEY
+
+
+
+cast send $WBTC_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
+$WBTC_OPERATOR_ADDRESS \
+$NETWORK_ADDRESS \
+$DEFAULT_TOKEN_ADDRESS \
+15518577009392402912 \
+"[0x2e0b2da4f7c51f422022e1adf040d0a5c87c5e92563406d3ada0922ce819c094]" \
+--rpc-url $RPC_URL \
+--private-key $WBTC_OPERATOR_PRIVATE_KEY
+
+
+cast send $STHETH_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
+$STETH_OPERATOR_ADDRESS \
+$NETWORK_ADDRESS \
+$DEFAULT_TOKEN_ADDRESS \
+2637436622059679160 \
+"[0x2e0b2da4f7c51f422022e1adf040d0a5c87c5e92563406d3ada0922ce819c094,0x7383ada32ce9ab36ce116cb9185307065027dcaf8ae7350fe028d185288023e7]" \
+--rpc-url $RPC_URL \
+--private-key $STETH_OPERATOR_PRIVATE_KEY
+
+
+
+cast send $WBTC_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
+$WBTC_OPERATOR_ADDRESS \
+$NETWORK_ADDRESS \
+$DEFAULT_TOKEN_ADDRESS \
+46418543521118345 \
+"[0xfe9315d1a049db3066e0f6deff366dc0a473838e7955e64806a051c35cbc1471]" \
+--rpc-url $RPC_URL \
+--private-key $WBTC_OPERATOR_PRIVATE_KEY
+
+
+
 
 
 cast send $DEFAULT_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
@@ -402,21 +437,7 @@ cast send 0x0E801D84Fa97b50751Dbf25036d067dCf18858bF "createNewTask(string,strin
 "(\"$CLUSTER_ID\",\"$ROLLUP_ID\",12,0x287b58b93ed6c17ace087bb87f611bf21102c0602b0956736b6e523fb41c328d)" \
 "([],[],[],[])" \
 --rpc-url $RPC_URL --private-key $WBTC_OPERATOR_PRIVATE_KEY
-
-
-curl -X POST https://a0f9-59-10-110-198.ngrok-free.app/rewards \
-    -H "Content-Type: application/json" \
-
-      -d '{
-"jsonrpc": "2.0",
-"method": "get_rewards",
-"params": {
-  "cluster_id": "'$CLUSTER_ID'",
-  "rollup_id": "'$ROLLUP_ID'"
-},
-"id": 1
-}'
-
+ 
 
 # curl -X POST http://localhost:3000/rewards \
 curl -X POST https://a0f9-59-10-110-198.ngrok-free.app/rewards \
@@ -430,3 +451,84 @@ curl -X POST https://a0f9-59-10-110-198.ngrok-free.app/rewards \
   },
   "id": 1
   }'
+
+
+  curl -X POST https://a0f9-59-10-110-198.ngrok-free.app/rewards \
+            -H "Content-Type: application/json" \
+            -d '{
+  "jsonrpc": "2.0",
+  "method": "get_rewards",
+  "params": {
+    "cluster_id": "'$CLUSTER_ID'",
+    "rollup_id": "'$ROLLUP_ID'"
+  },
+  "id": 1
+  }'
+{"jsonrpc":"2.0","id":1,"result":{"task_id":0,"distribution_data":[]}}
+
+
+
+curl -X POST https://af23-59-10-110-198.ngrok-free.app/rewards \
+            -H "Content-Type: application/json" \
+            -d '{
+  "jsonrpc": "2.0",
+  "method": "get_rewards",
+  "params": {
+    "cluster_id": "'$CLUSTER_ID'",
+    "rollup_id": "'$ROLLUP_ID'"
+  },
+  "id": 1
+  }'
+{"jsonrpc":"2.0","id":1,"result":{"task_id":0,"distribution_data":[]}}
+
+
+
+curl -X GET https://78cd-59-10-110-198.ngrok-free.app/operator-rewards/$CLUSTER_ID/$ROLLUP_ID/$WBTC_OPERATOR_ADDRESS
+
+
+
+
+
+0x045D9E0E4c88735ae6c4614E077593c6b0e32c33
+0xc140684a6020631c2ac4b1db7f9e6ca98ebbce8ba72591c4db18e755bfc7fefa
+
+
+
+
+cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+"isRollupAdded(string calldata clusterId, string calldata rollupId)(bool)" $CLUSTER_ID $ROLLUP_ID
+
+
+    function isRollupAdded(string calldata clusterId, string calldata rollupId) public view override returns (bool) {
+'
+
+
+function getRollups(string calldata clusterId) public view override returns (Rollup[] memory) {
+
+
+
+cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+"getRollups(string calldata clusterId)(Rollup[])" $CLUSTER_ID 
+
+
+getExecutors(string calldata clusterId, string calldata rollupId
+
+
+cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+"getExecutors(string calldata clusterId, string calldata rollupId)(address[] memory)" $CLUSTER_ID $ROLLUP_ID
+
+
+cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \                                                                 "getAllClusterIds()(string[] memory)"  
+
+
+getAllClusterIds() public view override returns (string[] memory) {
+return allClusterIds;
+
+
+
+cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+"getClusterIdsByOwner(address owner)(string[])" $NETWORK_ADDRESS
+
+
+
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "createNewTask(string,string,uint256,bytes32,address[],bytes32[],uint256[],uint256[])" $CLUSTER_ID $ROLLUP_ID 12 0x287b58b93ed6c17ace087bb87f611bf21102c0602b0956736b6e523fb41c328d [] [] [] [] --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # First, query the rewards endpoint and store the response
-response=$(curl -X POST http://localhost:3000/rewards \
+response=$(curl -X POST http://localhost:3000/create_new_task \
     -H "Content-Type: application/json" \
     -d '{
         "jsonrpc": "2.0",
@@ -33,10 +33,9 @@ echo "Total Operator Rewards: $total_operator_rewards"
 echo "----------------------------------------"
 
 format_array() {
-    local array=("$@")
     local type=$1
     shift
-    array=("$@")
+    local array=("$@")
     
     echo -n "["
     for i in "${!array[@]}"; do
@@ -57,8 +56,21 @@ format_array() {
     echo -n "]"
 }
 
-# Print the cast send command with new struct format
-echo "cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS \"createNewTask((string,string,uint256,bytes32),(address[],bytes32[],uint256[],uint256[]))\" \\"
-echo "  \"(\\\"$CLUSTER_ID\\\",\\\"$ROLLUP_ID\\\",12,0x287b58b93ed6c17ace087bb87f611bf21102c0602b0956736b6e523fb41c328d)\" \\"
-echo "  \"($(format_array "address" "${vaults[@]}"),$(format_array "hex" "${merkle_roots[@]}"),$(format_array "number" "${staker_rewards[@]}"),$(format_array "number" "${operator_rewards[@]}"))\" \\"
-echo "  --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY"
+# Build the formatted arrays
+task_id=$(echo "$response" | jq -r '.result.task_id')
+vaults_formatted=$(format_array "address" "${vaults[@]}")
+merkle_roots_formatted=$(format_array "hex" "${merkle_roots[@]}")
+staker_rewards_formatted=$(format_array "number" "${staker_rewards[@]}")
+operator_rewards_formatted=$(format_array "number" "${operator_rewards[@]}")
+
+echo "Executing cast send command..."
+
+# Execute the cast send command directly
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS \
+  "createNewTask((string,string,uint256,bytes32),(uint256,address[],bytes32[],uint256[],uint256[]))" \
+  "(\"$CLUSTER_ID\",\"$ROLLUP_ID\",12,0x287b58b93ed6c17ace087bb87f611bf21102c0602b0956736b6e523fb41c328d)" \
+  "($task_id,$vaults_formatted,$merkle_roots_formatted,$staker_rewards_formatted,$operator_rewards_formatted)" \
+  --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY
+
+# Print confirmation
+echo "Command executed with exit code: $?"

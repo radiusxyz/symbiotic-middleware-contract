@@ -283,7 +283,7 @@ cast send $DEFAULT_DELEGATOR_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_P
 cast send $DEFAULT_DELEGATOR_ADDRESS --rpc-url $RPC_URL --private-key $VAULT_OWNER_PRIVATE_KEY \
 "setNetworkLimit(bytes32 subnetwork, uint256 amount)" $SUBNETWORK 10000
 
-# Default Delegator - Primary Operator (70%)
+# Default Delegator - Primary Operator (70%)``
 cast send $DEFAULT_DELEGATOR_ADDRESS --rpc-url $RPC_URL --private-key $VAULT_OWNER_PRIVATE_KEY \
 "setOperatorNetworkShares(bytes32 subnetwork, address operator, uint256 shares)" $SUBNETWORK $DEFAULT_OPERATOR_ADDRESS 7000
 
@@ -338,24 +338,30 @@ cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_P
 "registerRollupExecutor(string clusterId, string rollupId, address executorAddress)" $CLUSTER_ID $ROLLUP_ID $EXECUTOR_ADDRESS
 
 # # Register Sequencers
+
+echo "REGISTER SEQUENCER" 
 cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY \
-"registerSequencer(string clusterId)" $CLUSTER_ID
+"registerTxOrderer(string clusterId)" $CLUSTER_ID
 
 cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $WBTC_OPERATOR_PRIVATE_KEY \
-"registerSequencer(string clusterId)" $CLUSTER_ID
+"registerTxOrderer(string clusterId)" $CLUSTER_ID
 
 cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $STETH_OPERATOR_PRIVATE_KEY \
-"registerSequencer(string clusterId)" $CLUSTER_ID
+"registerTxOrderer(string clusterId)" $CLUSTER_ID
+
+cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY_SECONDARY \
+"registerTxOrderer(string clusterId)" $CLUSTER_ID
+
+cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $WBTC_OPERATOR_PRIVATE_KEY_SECONDARY \
+"registerTxOrderer(string clusterId)" $CLUSTER_ID
+
+cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $STETH_OPERATOR_PRIVATE_KEY_SECONDARY \
+"registerTxOrderer(string clusterId)" $CLUSTER_ID
 
 # # # Setup Rewards
 cast send $REWARDS_CORE_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"addRewardPoolConfig(string,string,address,uint256,uint256,uint256,uint256)" $CLUSTER_ID $ROLLUP_ID $DEFAULT_TOKEN_ADDRESS 10000000000000000000 10 70 30
-
-cast send $DEFAULT_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"approve(address,uint256)" $REWARD_SYSTEM_ADDRESS 50000000000000000000
-
-cast send $DEFAULT_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"depositRewards(string,string,uint256)" $CLUSTER_ID $ROLLUP_ID 50000000000000000000
+"addRewardPoolConfig(string,string,address,uint256,uint256,uint256,uint256)" $CLUSTER_ID $ROLLUP_ID $DEFAULT_TOKEN_ADDRESS 1000000000000000000 30 70 30
+  
 
 # cast send $REWARDS_CORE_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 # "addRewardPoolConfig(string,string,address,uint256,uint256,uint256,uint256)" $CLUSTER_ID $ROLLUP_ID $WBTC_TOKEN_ADDRESS 10000000000000000000 10 70 30
@@ -365,7 +371,7 @@ cast send $DEFAULT_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVA
 
 # # Approve Rewards
 cast send $DEFAULT_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"approve(address,uint256)" $REWARDS_CORE_ADDRESS 50000000000000000000
+"approve(address,uint256)" $REWARDS_CORE_ADDRESS 5000000000000000000000
 
 # cast send $WBTC_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 # "approve(address,uint256)" $REWARDS_CORE_ADDRESS 50000000000000000000
@@ -375,12 +381,22 @@ cast send $DEFAULT_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVA
 
 # # Deposit Rewards
 cast send $REWARDS_CORE_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"depositRewards(string,string,uint256)" $CLUSTER_ID $ROLLUP_ID 50000000000000000000
+"depositRewards(string,string,uint256)" $CLUSTER_ID $ROLLUP_ID 5000000000000000000000
  
  
-#  cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-# "registerTokenTest(address token)" $STETH_TOKEN_ADDRESS --gas-limit 200000
+#  cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+# "getCurrentOperatorInfos(address token)" $STETH_TOKEN_ADDRESS --gas-limit 200000
 
 
 #  cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 # "respondToTaskTest(string clusterId,string rollupId,uint32 referenceTaskIndex,bool response)" $CLUSTER_ID $ROLLUP_ID 1 true --gas-limit 200000
+
+ 
+
+# cast call $OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+# "isOptedIn(address who, address where)(bool)" $STETH_OPERATOR_ADDRESS $NETWORK_ADDRESS
+
+
+ 
+#  cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+# "getCurrentOperatorInfos()"  

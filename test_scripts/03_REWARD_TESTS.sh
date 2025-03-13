@@ -606,25 +606,87 @@ $(cast abi-encode "f(address,uint256,bytes[])" $NETWORK_ADDRESS 1157920892373161
 --rpc-url $RPC_URL \
 --private-key $WBTC_ACCOUNT_PRIVATE_KEY
 
-cast send $WBTC_STAKER_REWARDS "claimRewards(address,address,bytes)" \
-$WBTC_OPERATOR_ADDRESS_SECONDARY \
+cast send $STETH_STAKER_REWARDS "claimRewards(address,address,bytes)" \
+$STETH_ACCOUNT_ADDRESS \
 $DEFAULT_TOKEN_ADDRESS \
 $(cast abi-encode "f(address,uint256,bytes[])" $NETWORK_ADDRESS 115792089237316195423570985008687907853269984665640564039457584007913129639935 []) \
 --rpc-url $RPC_URL \
---private-key $WBTC_ACCOUNT_PRIVATE_KEY_SECONDARY
+--private-key $STETH_ACCOUNT_PRIVATE_KEY
 
 
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $WBTC_STAKER_REWARDS
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $WBTC_ACCOUNT_ADDRESS --rpc-url $RPC_URL
 
 
 cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $DEFAULT_STAKER_REWARDS
 cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $DEFAULT_OPERATOR_REWARDS
-cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $WBTC_STAKER_REWARDS
-cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $STETH_STAKER_REWARDS
 
-cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $WBTC_ACCOUNT_ADDRESS
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $STETH_STAKER_REWARDS --rpc-url $RPC_URL
+
+
 
 cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS
 
 
 cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $DEFAULT_OPERATOR_ADDRESS
 cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $DEFAULT_OPERATOR_ADDRESS_SECONDARY
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $STETH_ACCOUNT_ADDRESS
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $REWARDS_CORE_ADDRESS
+
+
+
+
+
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $WBTC_OPERATOR_REWARDS --rpc-url $RPC_URL
+
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $WBTC_OPERATOR_REWARDS --rpc-url $RPC_URL
+
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $REWARDS_CORE_ADDRESS --rpc-url $RPC_URL
+
+
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $WBTC_OPERATOR_ADDRESS --rpc-url $RPC_URL
+
+{"cluster_id":"radius","rollup_id":"rollup_id_2","operator":"0x70997970C51812dc3A010C7d01b50e0d17dc79C8","rewards":[{"vault":"0x8615436b4ae383b2320a8545e728db98e05e0c06","operator_rewards_contract":"0x77FeD8e41861E24c1620416F2cf6A3BEdD5f6930","tasks":[{"task_id":1,"amount":"16664682775860016","proof":["0x6cdac81b75c685710102cbfaf4fadcc8a5fe9a88de41f8f6c89ae281087aba63"],"merkle_root":"0x4058d993eb26d2129b1d79457f19853f13059b0cbbe690bd8563a5b0b447441b"},{"task_id":0,"amount":"170615034168564919","proof":["0x77f24d8a7461e81b9a188ff0e31f5f90451b04c7cbd520509fd5ae636284071e"],"merkle_root":"0x72ae3f7e8e66b0191221c9802b4970657e4461c03865931f507bc151c2d546e4"}]}]}
+
+
+
+
+
+cast send $WBTC_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
+$WBTC_OPERATOR_ADDRESS \
+$NETWORK_ADDRESS \
+$DEFAULT_TOKEN_ADDRESS \
+52192199847055821 \
+"[0x57e27f9feb4f3ac49da79b4689c39c253b2f00c654dd6926da7e5bfbe216722d]" \
+--rpc-url $RPC_URL \
+--private-key $WBTC_OPERATOR_PRIVATE_KEY
+
+
+cast send $STETH_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
+$STETH_OPERATOR_ADDRESS \
+$NETWORK_ADDRESS \
+$DEFAULT_TOKEN_ADDRESS \
+2104363430298451076 \
+"[]" \
+--rpc-url $RPC_URL \
+--private-key $STETH_OPERATOR_PRIVATE_KEY
+
+
+
+cast send $WBTC_STAKER_REWARDS "claimRewards(address,address,bytes)" \
+$WBTC_ACCOUNT_ADDRESS \
+$DEFAULT_TOKEN_ADDRESS \
+$(cast abi-encode "f(address,uint256,bytes[])" $NETWORK_ADDRESS 115792089237316195423570985008687907853269984665640564039457584007913129639935 []) \
+--rpc-url $RPC_URL \
+--private-key $WBTC_ACCOUNT_PRIVATE_KEY
+
+
+
+cast send $STETH_STAKER_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
+$OPERATOR_ADDRESS \
+$NETWORK_ADDRESS \
+$TOKEN_CONTRACT_ADDRESS \
+7000000000000000000 \
+"[0x4ef3866300122664d1e7ae0489890fd57600af223d41b2a70a3a7f96d95989eb]" \
+--rpc-url $RPC_URL \
+--private-key $OPERATING_PRIVATE_KEY

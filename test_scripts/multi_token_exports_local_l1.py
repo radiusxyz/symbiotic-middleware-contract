@@ -6,15 +6,15 @@ def read_json_file(filename):
         return json.load(f)
 
 # Read all deployment files
-symbiotic_core = read_json_file('../latest-state/17000/symbiotic_core_deployment_output.json')['addresses']
-validation_manager = read_json_file('../latest-state/17000/validation_service_manager_deployment_output.json')['addresses']
-vault = read_json_file('../latest-state/17000/vault_deployment_output.json')['addresses']
-collateral = read_json_file('../latest-state/17000/collateral_deployment_output.json')['addresses']
-liveness_service_manager = read_json_file('../latest-state/17000/liveness_service_manager_deployment_output.json')['addresses']
-rewards_core = read_json_file('../latest-state/17000/rewards_core_deployment_output.json')['addresses']
-operator_rewards = read_json_file('../latest-state/17000/operator_reward_deployment_output.json')['addresses']
-staker_rewards = read_json_file('../latest-state/17000/staker_reward_deployment_output.json')['addresses']
-# simulation = read_json_file('../latest-state/17000/simulation_deployment_output.json')['addresses']
+symbiotic_core = read_json_file('../latest-state/32382/symbiotic_core_deployment_output.json')['addresses']
+validation_manager = read_json_file('../latest-state/32382/validation_service_manager_deployment_output.json')['addresses']
+vault = read_json_file('../latest-state/32382/vault_deployment_output.json')['addresses']
+collateral = read_json_file('../latest-state/32382/collateral_deployment_output.json')['addresses']
+liveness_service_manager = read_json_file('../latest-state/32382/liveness_service_manager_deployment_output.json')['addresses']
+rewards_core = read_json_file('../latest-state/32382/rewards_core_deployment_output.json')['addresses']
+operator_rewards = read_json_file('../latest-state/32382/operator_reward_deployment_output.json')['addresses']
+staker_rewards = read_json_file('../latest-state/32382/staker_reward_deployment_output.json')['addresses']
+# simulation = read_json_file('../latest-state/32382/simulation_deployment_output.json')['addresses']
 
 # Base Configuration
 print('set -x RPC_URL "http://14.32.133.68:8545"')
@@ -26,7 +26,7 @@ print('set -x NETWORK_PRIVATE_KEY "0xc140684a6020631c2ac4b1db7f9e6ca98ebbce8ba72
 print('set -x PRIVATE_KEY "0xc140684a6020631c2ac4b1db7f9e6ca98ebbce8ba72591c4db18e755bfc7fefa"')
 print('set -x SUBNETWORK "0x045D9E0E4c88735ae6c4614E077593c6b0e32c33000000000000000000000000"')
 
-
+print('set -x REWARDS_MANAGER_ACCOUNT_ADDRESSS "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"')
 
 print('\n# Token Contract Owner')
 print('set -x TOKEN_CONTRACT_OWNER_ADDRESS "0x045D9E0E4c88735ae6c4614E077593c6b0e32c33"')

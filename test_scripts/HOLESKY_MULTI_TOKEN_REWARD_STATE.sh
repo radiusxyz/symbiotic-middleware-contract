@@ -284,15 +284,21 @@ cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $WBTC_OPER
 cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $STETH_OPERATOR_PRIVATE_KEY \
 "registerTxOrderer(string clusterId)" $CLUSTER_ID
 
+cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $WBTC_OPERATOR_PRIVATE_KEY_SECONDARY \
+"registerTxOrderer(string clusterId)" $CLUSTER_ID
+
+cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $STETH_OPERATOR_PRIVATE_KEY_SECONDARY \
+"registerTxOrderer(string clusterId)" $CLUSTER_ID
+
 # # # Setup Rewards
 cast send $REWARDS_CORE_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"addRewardPoolConfig(string,string,address,uint256,uint256,uint256,uint256)" $CLUSTER_ID $ROLLUP_ID $DEFAULT_TOKEN_ADDRESS 10000000000000000000 10 70 30
+"addRewardPoolConfig(string,string,address,uint256,uint256,uint256,uint256)" CLUST $ROLLUP_ID $DEFAULT_TOKEN_ADDRESS 10000000000000000000 10 70 30
 
-cast send $DEFAULT_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"approve(address,uint256)" $REWARD_SYSTEM_ADDRESS 50000000000000000000
+# cast send $DEFAULT_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+# "approve(address,uint256)" $REWARD_SYSTEM_ADDRESS 50000000000000000000
 
-cast send $DEFAULT_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"depositRewards(string,string,uint256)" $CLUSTER_ID $ROLLUP_ID 50000000000000000000
+# cast send $DEFAULT_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+# "depositRewards(string,string,uint256)" $CLUSTER_ID $ROLLUP_ID 50000000000000000000
 
 # cast send $REWARDS_CORE_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 # "addRewardPoolConfig(string,string,address,uint256,uint256,uint256,uint256)" $CLUSTER_ID $ROLLUP_ID $WBTC_TOKEN_ADDRESS 10000000000000000000 10 70 30
@@ -334,3 +340,27 @@ cast send $REWARDS_CORE_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVAT
 
 # cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY --value 0.5ether $WBTC_OPERATOR_ADDRESS_SECONDARY
 # cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY --value 0.5ether $STETH_OPERATOR_ADDRESS_SECONDARY
+
+
+# cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "createNewTask(string,string,uint256,bytes32,address[],bytes32[],uint256[],uint256[])" $CLUSTER_ID $ROLLUP_ID 12 0x287b58b93ed6c17ace087bb87f611bf21102c0602b0956736b6e523fb41c328d [] [] [] [] --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY
+
+
+
+# stompesi I Radius
+#   6:21 PM
+# stompesi - clusterId: "radius"
+# stompesi - rollupId: "rollup_id_2"
+# stompesi - blockNumber: 5
+# stompesi - blockCommitment: 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+# stompesi - vaultAddresses: []
+# stompesi - operatorMerkleRoots: []
+# stompesi - totalStakerReward: []
+# stompesi - totalOperatorReward: []
+
+
+
+# cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS \
+#         "createNewTask((string,string,uint256,bytes32),(address[],bytes32[],uint256[],uint256[]))" \
+#         "(\"$CLUSTER_ID\",\"$ROLLUP_ID\",5,0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470)" \
+#         "([],[],[],[])" \
+#         --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY
