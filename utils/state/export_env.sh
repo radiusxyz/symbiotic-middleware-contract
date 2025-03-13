@@ -4,12 +4,7 @@ SCRIPT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 LATEST_STATE_PATH="$PROJECT_ROOT_PATH/latest-state"
 
 source $SCRIPT_PATH/../env.sh
-
-
-STATE_DIR="$LATEST_STATE_PATH/32382"
-
-
-LATEST_STATE_PATH=$PROJECT_ROOT_PATH/latest-state
+STATE_DIR="$LATEST_STATE_PATH/$CHAIN_ID"
 
 # Function to extract values from JSON files using jq
 extract_json_addresses() {
