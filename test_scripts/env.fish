@@ -1,4 +1,4 @@
-set -x RPC_URL "https://ethereum-holesky-rpc.publicnode.com"
+set -x LIVENESS_RPC_URL "https://ethereum-holesky-rpc.publicnode.com"
 
 # Rollup side
 
@@ -87,8 +87,8 @@ set -x ROLLUP_ID rollup_id_2
 set -x OWNER_ADDRESS 0xdF14d78165Ae80AB2D6E30361426672cDc4b9315
 set -x ROLLUP_TYPE polygon_cdk
 set -x ENCRYPTED_TRANSACTION_TYPE skde
-set -x PLATFORM ethereum
-set -x SERVICE_PROVIDER radius
+set -x LIVENESS_PLATFORM ethereum
+set -x LIVENESS_SERVICE_PROVIDER radius
 set -x ORDER_COMMITMENT_TYPE sign
 set -x EXECUTOR_ADDRESS 0xdF14d78165Ae80AB2D6E30361426672cDc4b9315
 set -x VALIDATION_ADDRESS "0xc95e545AE88acb9c11c862BE74c549ce174996DF"

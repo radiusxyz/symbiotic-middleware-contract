@@ -8,5 +8,5 @@ source $SCRIPT_PATH/../utils.sh
 cd $PROJECT_ROOT_PATH
 
 forge script script/vault/Deposit.sol:Deposit \
---rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv \
+--rpc-url $LIVENESS_RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv \
 --sig "run(uint256 depositAmount)" $DEPOSIT_AMOUNT

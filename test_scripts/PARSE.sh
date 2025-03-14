@@ -61,4 +61,4 @@ format_array() {
 echo "cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS \"createNewTask((string,string,uint256,bytes32),(address[],bytes32[],uint256[],uint256[]))\" \\"
 echo "  \"(\\\"$CLUSTER_ID\\\",\\\"$ROLLUP_ID\\\",12,0x287b58b93ed6c17ace087bb87f611bf21102c0602b0956736b6e523fb41c328d)\" \\"
 echo "  \"($(format_array "address" "${vaults[@]}"),$(format_array "hex" "${merkle_roots[@]}"),$(format_array "number" "${staker_rewards[@]}"),$(format_array "number" "${operator_rewards[@]}"))\" \\"
-echo "  --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY"
+echo "  --rpc-url $LIVENESS_RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY"

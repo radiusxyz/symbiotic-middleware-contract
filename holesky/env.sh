@@ -1,4 +1,4 @@
-export RPC_URL="https://ethereum-holesky-rpc.publicnode.com"
+export LIVENESS_RPC_URL="https://ethereum-holesky-rpc.publicnode.com"
 
 export RADIUS_ADDRESS="0x96C969D31b4fa8A93a081aCB1271D13fb157bd1e"
 export RADIUS_PRIVATE_KEY="0x2141478fe814f58de31b5a6fb2a7682b7dae755cc19bab6acdbfa1fcfe6e64e1"
@@ -79,8 +79,8 @@ export ROLLUP_ID="radius_rollup"
 export OWNER_ADDRESS=$NETWORK_ADDRESS
 export ROLLUP_TYPE="polygon_cdk"
 export ENCRYPTED_TRANSACTION_TYPE="skde"
-export PLATFORM="ethereum"
-export SERVICE_PROVIDER="symbiotic"
+export LIVENESS_PLATFORM="ethereum"
+export LIVENESS_SERVICE_PROVIDER="symbiotic"
 export ORDER_COMMITMENT_TYPE="sign"
 export EXECUTOR_ADDRESS="0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 

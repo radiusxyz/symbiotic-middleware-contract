@@ -15,6 +15,6 @@ cd $PROJECT_ROOT_PATH
 echo "LOCAL L1"
 echo $PRIVATE_KEY
 
-echo $RPC_URL
+echo $LIVENESS_RPC_URL
 
-forge script script/deploy/SymbioticCoreDeploy.sol:SymbioticCoreDeploy --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv
+forge script script/deploy/SymbioticCoreDeploy.sol:SymbioticCoreDeploy --rpc-url $LIVENESS_RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv

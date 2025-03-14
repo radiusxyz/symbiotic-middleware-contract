@@ -17,7 +17,7 @@ staker_rewards = read_json_file('../latest-state/31337/staker_reward_deployment_
 # simulation = read_json_file('../latest-state/31337/simulation_deployment_output.json')['addresses']
 
 # Base Configuration
-print('set -x RPC_URL "http://127.0.0.1:8545"')
+print('set -x LIVENESS_RPC_URL "http://127.0.0.1:8545"')
 
 print('\n# Rollup side')
 print('\n# Network Configuration')
@@ -120,8 +120,8 @@ print('set -x ROLLUP_ID rollup_id_2')
 print('set -x OWNER_ADDRESS 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')
 print('set -x ROLLUP_TYPE polygon_cdk')
 print('set -x ENCRYPTED_TRANSACTION_TYPE skde')
-print('set -x PLATFORM ethereum')
-print('set -x SERVICE_PROVIDER radius')
+print('set -x LIVENESS_PLATFORM ethereum')
+print('set -x LIVENESS_SERVICE_PROVIDER radius')
 print('set -x ORDER_COMMITMENT_TYPE sign')
 print('set -x EXECUTOR_ADDRESS 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266')
 

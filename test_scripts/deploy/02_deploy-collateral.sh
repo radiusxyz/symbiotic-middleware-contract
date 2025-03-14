@@ -10,4 +10,4 @@ source $PARENT_PATH/utils/utils.sh
 
 cd $PROJECT_ROOT_PATH
 
-forge script script/deploy/CollateralDeploy.sol:CollateralDeploy --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv
+forge script script/deploy/CollateralDeploy.sol:CollateralDeploy --rpc-url $LIVENESS_RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv

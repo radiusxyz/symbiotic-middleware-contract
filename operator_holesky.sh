@@ -1,4 +1,4 @@
-RPC_URL="https://ethereum-holesky-rpc.publicnode.com"
+LIVENESS_RPC_URL="https://ethereum-holesky-rpc.publicnode.com"
 
 # Rollup side 
 NETWORK_ADDRESS="0x96C969D31b4fa8A93a081aCB1271D13fb157bd1e"
@@ -45,41 +45,41 @@ OPERATING_PRIVATE_KEY="0xabe756f4bc9ad050f245c3feb5f59b8636080003a205ebe3b661255
 #######
 
 # Operator register 확인
-cast call $OPERATOR_REGISTRY_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $OPERATOR_REGISTRY_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "isEntity(address who)(bool)" $OPERATOR_ADDRESS
 #####################
-cast send $OPERATOR_REGISTRY_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
+cast send $OPERATOR_REGISTRY_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
 "registerOperator()"
 #####################
 
 # Operator가 network에 Optin 되었는지 확인
-cast call $OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "isOptedIn(address who, address where)(bool)" $OPERATOR_ADDRESS $NETWORK_ADDRESS
 #####################
-cast send $OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
+cast send $OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
 "optIn(address network)" $NETWORK_ADDRESS
 #####################
 
 # Operator가 vault에 Optin 되었는지 확인
-cast call $OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "isOptedIn(address who, address where)(bool)" $OPERATOR_ADDRESS $VAULT_CONTRACT_ADDRESS
 #####################
-cast send $OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
+cast send $OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
 "optIn(address vault)" $VAULT_CONTRACT_ADDRESS
 #####################
 
 # Operator가 register 되었는지 확인
-cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getCurrentOperatorInfos()((address, address, (address, uint256)[], uint256)[])"
 #####################
-cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "registerOperator(address operatorAddress, address operatingAddress)" $OPERATOR_ADDRESS $OPERATING_ADDRESS
 #####################
 
 # registerSequencer (14번)
-cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getSequencerList(string clusterId)(address[] memory)" $CLUSTER_ID
 #####################
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATING_PRIVATE_KEY \
+cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $OPERATING_PRIVATE_KEY \
 "registerSequencer(string clusterId)" $CLUSTER_ID
 #####################

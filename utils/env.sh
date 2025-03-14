@@ -9,7 +9,7 @@ FOUNDRY_IMAGE=ghcr.io/foundry-rs/foundry:nightly-5b7e4cb3c882b28f3c32ba580de27ce
 
 IS_LOCAL_BLOCKCHAIN=true
 CHAIN_ID=31337
-RPC_URL="http://127.0.0.1:8545"
+LIVENESS_RPC_URL="http://127.0.0.1:8545"
 
 
 echo -e "\n# Environment Variables "
@@ -41,8 +41,9 @@ CLUSTER_ID="radius"
 MAX_SEQUENCER_NUMBER="30"
 ROLLUP_TYPE="polygon_cdk"
 ENCRYPTED_TRANSACTION_TYPE="skde"
-PLATFORM="ethereum"
-SERVICE_PROVIDER="radius"
+LIVENESS_PLATFORM="ethereum"
+LIVENESS_SERVICE_PROVIDER="radius"
 ORDER_COMMITMENT_TYPE="sign"
 
 
+EXECUTOR_ADDRESS="0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"

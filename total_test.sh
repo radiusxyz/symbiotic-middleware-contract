@@ -1,4 +1,4 @@
-RPC_URL="http://127.0.0.1:8545"
+LIVENESS_RPC_URL="http://127.0.0.1:8545"
 
 # Rollup side 
 NETWORK_ADDRESS="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
@@ -49,126 +49,126 @@ COLLATERAL_CONTRACT_ADDRESS="0x0665FbB86a3acECa91Df68388EC4BBE11556DDce"
 #######
 
 # Vault Delegator check (number 1)
-cast call $VAULT_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VAULT_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "delegator()(address)"
 
 # total Staking check (number 2)
-cast call $VAULT_CONTRACT_ADDRESS --rpc-url $RPC_URL "totalStake()(uint256)"
-cast call $VAULT_CONTRACT_ADDRESS --rpc-url $RPC_URL "activeStake()(uint256)"
+cast call $VAULT_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL "totalStake()(uint256)"
+cast call $VAULT_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL "activeStake()(uint256)"
 ####################
-cast send $TOKEN_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
+cast send $TOKEN_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
 "approve(address spender, uint256 value)(bool)" $COLLATERAL_CONTRACT_ADDRESS 1000
 
-cast send $COLLATERAL_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $COLLATERAL_OWNER_PRIVATE_KEY \
+cast send $COLLATERAL_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $COLLATERAL_OWNER_PRIVATE_KEY \
 "deposit(address recipient, uint256 amount)(uint256)" $TOKEN_CONTRACT_OWNER_ADDRESS 1000
 
-cast send $COLLATERAL_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
+cast send $COLLATERAL_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
 "approve(address spender, uint256 value)(bool)" $VAULT_CONTRACT_ADDRESS 100
 
-cast send $VAULT_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
+cast send $VAULT_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
 "deposit(address onBehalfOf, uint256 amount)(uint256 depositedAmount, uint256 mintedShares)" $TOKEN_CONTRACT_OWNER_ADDRESS 100
 #####################
 
 # Operator register check (number 3)
-cast call $OPERATOR_REGISTRY_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $OPERATOR_REGISTRY_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "isEntity(address who)(bool)" $OPERATOR_ADDRESS
 #####################
-cast send $OPERATOR_REGISTRY_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
+cast send $OPERATOR_REGISTRY_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
 "registerOperator()"
 #####################
 
 # Network register check (number 4)
-cast call $NETWORK_REGISTRY_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $NETWORK_REGISTRY_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "isEntity(address who)(bool)" $NETWORK_ADDRESS
 #####################
-cast send $NETWORK_REGISTRY_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $NETWORK_REGISTRY_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "registerNetwork()"
 #####################
 
 # Middleware가 등록되었는지 check(5번)
-cast call $NETWORK_MIDDLEWARE_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $NETWORK_MIDDLEWARE_SERVICE_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "middleware(address networkAddress)(address middlewareAddress)" $NETWORK_ADDRESS
 #####################
-cast send $NETWORK_MIDDLEWARE_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $NETWORK_MIDDLEWARE_SERVICE_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "setMiddleware(address middlewareAddress)" $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS
 #####################
 
 # Operator가 network에 Optin 되었는지 check (6번)
-cast call $OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "isOptedIn(address who, address where)(bool)" $OPERATOR_ADDRESS $NETWORK_ADDRESS
 #####################
-cast send $OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
+cast send $OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
 "optIn(address network)" $NETWORK_ADDRESS
 #####################
 
 # Operator가 vault에 Optin 되었는지 check (7번)
-cast call $OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "isOptedIn(address who, address where)(bool)" $OPERATOR_ADDRESS $VAULT_CONTRACT_ADDRESS
 #####################
-cast send $OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
+cast send $OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $OPERATOR_PRIVATE_KEY \
 "optIn(address vault)" $VAULT_CONTRACT_ADDRESS
 #####################
 
 # Vault가 register 되었는지 check (8번)
-cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "vaultLen()(uint256)" 
-cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getCurrentVaults()(address[])" 
-cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "isActiveVault(address vault)(bool)" $VAULT_CONTRACT_ADDRESS
 #####################
-cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "registerToken(address tokenAddress)" $TOKEN_CONTRACT_ADDRESS
 
-cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "registerVault(address vaultAddress)" $VAULT_CONTRACT_ADDRESS
 #####################
 
 # Operator가 register 되었는지 check (9번)
-cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getCurrentOperatorInfos()((address, address, (address, uint256)[], uint256)[])"
 #####################
-cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "registerOperator(address operatorAddress, address operatingAddress)" $OPERATOR_ADDRESS $OPERATING_ADDRESS
 #####################
 
 # MaxNetworkLimit check (10번)
-cast call $DELEGATOR_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $DELEGATOR_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "maxNetworkLimit(bytes32 subnetwork)(uint256 maxNetworkLimit)" $SUBNETWORK
 #####################
-cast send $DELEGATOR_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $DELEGATOR_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "setMaxNetworkLimit(uint96 identifier, uint256 amount)" 0 10000
 #####################
 
 # networkLimit check (11번)
-cast call $DELEGATOR_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $DELEGATOR_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "networkLimit(bytes32 subnetwork)(uint256 networkLimit)" $SUBNETWORK
 #####################
-cast send $DELEGATOR_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $VAULT_OWNER_PRIVATE_KEY \
+cast send $DELEGATOR_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $VAULT_OWNER_PRIVATE_KEY \
 "setNetworkLimit(bytes32 subnetwork, uint256 amount)" $SUBNETWORK 100
 #####################
 
 # (12번)
-cast call $DELEGATOR_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $DELEGATOR_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "operatorNetworkShares(bytes32 subnetwork, address operator)(uint256)" $SUBNETWORK $OPERATOR_ADDRESS
-cast call $DELEGATOR_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $DELEGATOR_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "totalOperatorNetworkShares(bytes32 subnetwork)(uint256)" $SUBNETWORK
-cast call $DELEGATOR_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $DELEGATOR_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "stake(bytes32 subnetwork, address operator)(uint256)" $SUBNETWORK $OPERATOR_ADDRESS
 #####################
-cast send $DELEGATOR_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $VAULT_OWNER_PRIVATE_KEY \
+cast send $DELEGATOR_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $VAULT_OWNER_PRIVATE_KEY \
 "setOperatorNetworkShares(bytes32 subnetwork, address operator, uint256 shares)" $SUBNETWORK $OPERATOR_ADDRESS 100
 #####################
 ####################################################################################
-cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getCurrentTotalStake()(uint256)"
-cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getCurrentTokenTotalStake(address token)(uint256)" $TOKEN_CONTRACT_ADDRESS
-cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getCurrentOperatorStake(address operator)(uint256)" $OPERATOR_ADDRESS
-cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getCurrentOperatorEachStakeInfo(address operator)((address, uint256)[])" $OPERATOR_ADDRESS
-cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getCurrentOperatorStakeInfo(address operator, address token)(uint256)" $OPERATOR_ADDRESS $TOKEN_CONTRACT_ADDRESS
 ####################################################################################
 
@@ -181,93 +181,93 @@ ROLLUP_ID="rollup_id_2"
 OWNER_ADDRESS="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 ROLLUP_TYPE="polygon_cdk"
 ENCRYPTED_TRANSACTION_TYPE="skde"
-PLATFORM="ethereum"
-SERVICE_PROVIDER="radius"
+LIVENESS_PLATFORM="ethereum"
+LIVENESS_SERVICE_PROVIDER="radius"
 VALIDATION_ADDRESS=$VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS
 ORDER_COMMITMENT_TYPE="sign"
 EXECUTOR_ADDRESS="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 
-cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getClustersByOwner(address owner)(string[])" $NETWORK_ADDRESS
 #####################
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_SEQUENCER_NUMBER
 #####################
 
 # addRollup (14번)
-cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getRollupInfo(string clusterId, string rollupId)((string,address,string,string,string,address[],(string,string,address)))" $CLUSTER_ID $ROLLUP_ID
 #####################
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "addRollup(string,(string,address,string,string,string,address,(string,string,address)))" \
-"$CLUSTER_ID" "($ROLLUP_ID, $OWNER_ADDRESS, $ROLLUP_TYPE, $ENCRYPTED_TRANSACTION_TYPE, $ORDER_COMMITMENT_TYPE, $EXECUTOR_ADDRESS, ($PLATFORM, $SERVICE_PROVIDER, $VALIDATION_ADDRESS))"
+"$CLUSTER_ID" "($ROLLUP_ID, $OWNER_ADDRESS, $ROLLUP_TYPE, $ENCRYPTED_TRANSACTION_TYPE, $ORDER_COMMITMENT_TYPE, $EXECUTOR_ADDRESS, ($LIVENESS_PLATFORM, $LIVENESS_SERVICE_PROVIDER, $VALIDATION_ADDRESS))"
 #####################
 
 ##################### Register executor #####################
-cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getExecutorList(string clusterId, string rollupId)(address[])" $CLUSTER_ID $ROLLUP_ID
-cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "isRegisteredRollupExecutor(string clusterId, string rollupId, address executorAddress)(bool)" $CLUSTER_ID $ROLLUP_ID $EXECUTOR_ADDRESS
 #####################
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "registerRollupExecutor(string clusterId, string rollupId, address executorAddress)" $CLUSTER_ID $ROLLUP_ID $EXECUTOR_ADDRESS
 #####################
 #############################################################
 
 # registerSequencer (14번)
-cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getSequencerList(string clusterId)(address[] memory)" $CLUSTER_ID
 #####################
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATING_PRIVATE_KEY \
+cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $OPERATING_PRIVATE_KEY \
 "registerSequencer(string clusterId)" $CLUSTER_ID
 #####################
 
 #########################################################################################################################################
 
 ################## Testing ##################
-forge script script/deploy/LivenessRadiusDeployer.sol:LivenessRadiusDeployer --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY --broadcast -vvvv
-cast send 0x4c5859f0F772848b2D91F1D83E2Fe57935348029 --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+forge script script/deploy/LivenessRadiusDeployer.sol:LivenessRadiusDeployer --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY --broadcast -vvvv
+cast send 0x4c5859f0F772848b2D91F1D83E2Fe57935348029 --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_SEQUENCER_NUMBER
-cast call 0x4c5859f0F772848b2D91F1D83E2Fe57935348029 --rpc-url $RPC_URL \
+cast call 0x4c5859f0F772848b2D91F1D83E2Fe57935348029 --rpc-url $LIVENESS_RPC_URL \
 "getClustersByOwner(address owner)(string[])" $NETWORK_ADDRESS
-cast send 0x4c5859f0F772848b2D91F1D83E2Fe57935348029 --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send 0x4c5859f0F772848b2D91F1D83E2Fe57935348029 --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "addRollup(string,(string,address,string,string,string,address,(string,string,address)))" \
-"$CLUSTER_ID" "($ROLLUP_ID, $OWNER_ADDRESS, $ROLLUP_TYPE, $ENCRYPTED_TRANSACTION_TYPE, $ORDER_COMMITMENT_TYPE, $EXECUTOR_ADDRESS, ($PLATFORM, $SERVICE_PROVIDER, $VALIDATION_ADDRESS))"
-cast call 0x4c5859f0F772848b2D91F1D83E2Fe57935348029 --rpc-url $RPC_URL \
+"$CLUSTER_ID" "($ROLLUP_ID, $OWNER_ADDRESS, $ROLLUP_TYPE, $ENCRYPTED_TRANSACTION_TYPE, $ORDER_COMMITMENT_TYPE, $EXECUTOR_ADDRESS, ($LIVENESS_PLATFORM, $LIVENESS_SERVICE_PROVIDER, $VALIDATION_ADDRESS))"
+cast call 0x4c5859f0F772848b2D91F1D83E2Fe57935348029 --rpc-url $LIVENESS_RPC_URL \
 "getRollupInfo(string clusterId, string rollupId)((string,address,string,string,string,address[],(string,string,address)))" $CLUSTER_ID $ROLLUP_ID
 ############################################
 
 #########################################################################################################################################
 
 ##########
-RPC_URL="https://ethereum-holesky-rpc.publicnode.com"
+LIVENESS_RPC_URL="https://ethereum-holesky-rpc.publicnode.com"
 VAULT_CONTRACT_ADDRESS="0x87Fb558A19ac2954546Bf4A7aE013751afd60265"
 VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS="0xB52B38186107C473779805C41a0e9B23df8f25Fb"
 NETWORK_PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 OPERATOR_ADDRESS="0x010F5B294C54b8A5A53B10694C31CDB50Ab4C857" 
 OPERATING_ADDRESS="0x65018cBDB7C496D9a404C7fCB80ee77825daAB34"
 
-cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "registerOperator(address operatorAddress, address operatingAddress)" $OPERATOR_ADDRESS $OPERATING_ADDRESS
 
 #################
 # Vault register check
-cast call $VAULT_FACTORY_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VAULT_FACTORY_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "isEntity(address who)(bool)" $VAULT_CONTRACT_ADDRESS
 #####################
-cast send $VAULT_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
+cast send $VAULT_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
 "deposit(address onBehalfOf, uint256 amount)(uint256 depositedAmount, uint256 mintedShares)" $TOKEN_CONTRACT_OWNER_ADDRESS 100
 #####################
-cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "SLASHING_WINDOW()(uint48)"
-cast call $VAULT_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VAULT_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "epochDuration()(uint48)"
-cast call $VAULT_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+cast call $VAULT_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "slasher()(address)"
 
 
 ##################################################
-forge script script/deploy/VaultHoleskyDeploy.sol:VaultHoleskyDeploy --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY --broadcast -vvvv
+forge script script/deploy/VaultHoleskyDeploy.sol:VaultHoleskyDeploy --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY --broadcast -vvvv
 ##################################################
 
 
@@ -283,24 +283,24 @@ cast call $TOKEN_CONTRACT_ADDRESS "balanceOf(address)(uint256)" $SECONDARY_ADDRE
 cast call $TOKEN_CONTRACT_ADDRESS "balanceOf(address)(uint256)" $NETWORK_ADDRESS
 
 # Get reward pool balance
-cast call $REWARD_SYSTEM_ADDRESS --rpc-url $RPC_URL \
+cast call $REWARD_SYSTEM_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "getRewardPoolBalance(string,string)(uint256)" $CLUSTER_ID $ROLLUP_ID
 
 
 #Create and Deposit Rewards
 
-cast send $REWARDS_MANAGER_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $REWARDS_MANAGER_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "addRewardPoolConfig(string,string,address,uint256,uint256)" $CLUSTER_ID $ROLLUP_ID $TOKEN_CONTRACT_ADDRESS 100 11
 
 
-cast send $TOKEN_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY "approve(address,uint256)" $REWARDS_MANAGER_ADDRESS 10000000000000000000
+cast send $TOKEN_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY "approve(address,uint256)" $REWARDS_MANAGER_ADDRESS 10000000000000000000
 
 
-cast send $REWARDS_MANAGER_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $REWARDS_MANAGER_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "depositRewards(string,string,uint256)" $CLUSTER_ID $ROLLUP_ID 10000000000000000000
 
 # Hardcoded Distribution Command
-cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --private-key $NETWORK_PRIVATE_KEY --rpc-url $RPC_URL\
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --private-key $NETWORK_PRIVATE_KEY --rpc-url $LIVENESS_RPC_URL\
   "distributeRewards(string,string,address,bytes32,uint48,bytes,bytes,uint256)" \
   $CLUSTER_ID \
   $ROLLUP_ID \
@@ -318,7 +318,7 @@ $NETWORK_ADDRESS \
 $TOKEN_CONTRACT_ADDRESS \
 4000000000000000000 \
 "[0xb74c3ea8209e020c8923713850ab813c8f536d38f179762be415c239d3080a60]" \
---rpc-url $RPC_URL \
+--rpc-url $LIVENESS_RPC_URL \
 --private-key $OPERATING_PRIVATE_KEY
 
 cast send $DEFAULT_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
@@ -327,5 +327,5 @@ $NETWORK_ADDRESS \
 $TOKEN_CONTRACT_ADDRESS \
 3000000000000000000 \
 "[0x9543eb0d43cff4872c9a627d355e02990db82a37882ef80abaca5a7fc41cffc9]" \
---rpc-url $RPC_URL \
+--rpc-url $LIVENESS_RPC_URL \
 --private-key $SECONDARY_PRIVATE_KEY

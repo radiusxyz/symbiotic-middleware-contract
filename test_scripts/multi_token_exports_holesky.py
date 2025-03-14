@@ -17,7 +17,7 @@ staker_rewards = read_json_file('../latest-state/17000/staker_reward_deployment_
 # simulation = read_json_file('../latest-state/17000/simulation_deployment_output.json')['addresses']
 
 # Base Configuration
-print('set -x RPC_URL "https://ethereum-holesky-rpc.publicnode.com"')
+print('set -x LIVENESS_RPC_URL "https://ethereum-holesky-rpc.publicnode.com"')
 
 print('\n# Rollup side')
 print('\n# Network Configuration')
@@ -134,8 +134,8 @@ print('set -x ROLLUP_ID rollup_id_2')
 print('set -x OWNER_ADDRESS 0xdF14d78165Ae80AB2D6E30361426672cDc4b9315')
 print('set -x ROLLUP_TYPE polygon_cdk')
 print('set -x ENCRYPTED_TRANSACTION_TYPE skde')
-print('set -x PLATFORM ethereum')
-print('set -x SERVICE_PROVIDER radius')
+print('set -x LIVENESS_PLATFORM ethereum')
+print('set -x LIVENESS_SERVICE_PROVIDER radius')
 print('set -x ORDER_COMMITMENT_TYPE sign')
 print('set -x EXECUTOR_ADDRESS 0xdF14d78165Ae80AB2D6E30361426672cDc4b9315')
 

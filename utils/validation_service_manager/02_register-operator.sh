@@ -8,5 +8,5 @@ source $SCRIPT_PATH/../utils.sh
 cd $PROJECT_ROOT_PATH
 
 forge script script/validation_service_manager/RegisterOperator.sol:RegisterOperator \
---rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv \
+--rpc-url $LIVENESS_RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv \
 --sig "run(address)" $OPERATOR_ADDRESS

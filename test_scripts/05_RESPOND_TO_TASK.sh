@@ -7,7 +7,7 @@ cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "respondToTask(string,str
   $ROLLUP_ID \
   $TASK_COUNT \
   true \
---rpc-url $RPC_URL \
+--rpc-url $LIVENESS_RPC_URL \
 --private-key $DEFAULT_OPERATOR_PRIVATE_KEY
 
 sleep 0.1
@@ -18,7 +18,7 @@ cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "respondToTask(string,str
   $ROLLUP_ID \
   $TASK_COUNT \
   true \
---rpc-url $RPC_URL \
+--rpc-url $LIVENESS_RPC_URL \
 --private-key $WBTC_OPERATOR_PRIVATE_KEY
 
 sleep 0.1
@@ -30,7 +30,7 @@ cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "respondToTask(string,str
   $ROLLUP_ID \
   $TASK_COUNT \
   true \
---rpc-url $RPC_URL \
+--rpc-url $LIVENESS_RPC_URL \
 --private-key $STETH_OPERATOR_PRIVATE_KEY
 
 sleep 0.1
@@ -42,7 +42,7 @@ sleep 0.1
 #   $ROLLUP_ID \
 #   $TASK_COUNT \
 #   true \
-# --rpc-url $RPC_URL \
+# --rpc-url $LIVENESS_RPC_URL \
 # --private-key $DEFAULT_OPERATOR_PRIVATE_KEY_SECONDARY
 
 
@@ -53,7 +53,7 @@ cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "respondToTask(string,str
   $ROLLUP_ID \
   $TASK_COUNT \
   true \
---rpc-url $RPC_URL \
+--rpc-url $LIVENESS_RPC_URL \
 --private-key $WBTC_OPERATOR_PRIVATE_KEY_SECONDARY
 
 
@@ -64,7 +64,7 @@ cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "respondToTask(string,str
   $ROLLUP_ID \
   $TASK_COUNT \
   true \
---rpc-url $RPC_URL \
+--rpc-url $LIVENESS_RPC_URL \
 --private-key $STETH_OPERATOR_PRIVATE_KEY_SECONDARY
 
 sleep 0.1

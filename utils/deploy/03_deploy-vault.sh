@@ -11,4 +11,4 @@ fi
 
 cd $PROJECT_ROOT_PATH
 
-forge script script/deploy/VaultDeploy.sol:VaultDeploy --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv
+forge script script/deploy/VaultDeploy.sol:VaultDeploy --rpc-url $LIVENESS_RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv
