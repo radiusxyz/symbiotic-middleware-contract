@@ -10,9 +10,6 @@
 [submodule "lib/symbioticfi/collateral"]
 	path = lib/symbioticfi/collateral
 	url = https://github.com/symbioticfi/collateral.git
-[submodule "lib/Uniswap/permit2"]
-	path = lib/Uniswap/permit2
-	url = https://github.com/Uniswap/permit2.git
 [submodule "lib/OpenZeppelin/openzeppelin-contracts-upgradeable_v4.7.0"]
 	path = lib/OpenZeppelin/openzeppelin-contracts-upgradeable_v4.7.0
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable.git
@@ -22,3 +19,6 @@
 [submodule "lib/symbioticfi/rewards"]
 	path = lib/symbioticfi/rewards
 	url = https://github.com/symbioticfi/rewards.git
+[submodule "lib/symbioticfi/burners"]
+	path = lib/symbioticfi/burners
+	url = https://github.com/symbioticfi/burners.git
