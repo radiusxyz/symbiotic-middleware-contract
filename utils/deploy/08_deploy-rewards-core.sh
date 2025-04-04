@@ -11,4 +11,4 @@ fi
 
 cd $PROJECT_ROOT_PATH
 
-forge script script/deploy/RewardsCoreDeploy.sol:RewardsCoreDeploy --rpc-url $LIVENESS_RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv
+forge script script/deploy/RewardsCoreDeploy.sol:RewardsCoreDeploy --rpc-url $VALIDATION_RPC_URL --private-key $NETWORK_PRIVATE_KEY --broadcast -vvvv

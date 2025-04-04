@@ -12,107 +12,110 @@ extract_json_addresses() {
 }
 
 # Read all deployment files
-SYMBIOTIC_CORE=$(extract_json_addresses "$STATE_DIR/symbiotic_core_deployment_output.json")
-VALIDATION_MANAGER=$(extract_json_addresses "$STATE_DIR/validation_service_manager_deployment_output.json")
-VAULT=$(extract_json_addresses "$STATE_DIR/vault_deployment_output.json")
-COLLATERAL=$(extract_json_addresses "$STATE_DIR/collateral_deployment_output.json")
-LIVENESS_SERVICE_MANAGER=$(extract_json_addresses "$STATE_DIR/liveness_service_manager_deployment_output.json")
-REWARDS_CORE=$(extract_json_addresses "$STATE_DIR/rewards_core_deployment_output.json")
-OPERATOR_REWARDS=$(extract_json_addresses "$STATE_DIR/operator_reward_deployment_output.json")
-STAKER_REWARDS=$(extract_json_addresses "$STATE_DIR/staker_reward_deployment_output.json")
+SYMBIOTIC_CORE_FILE=$(extract_json_addresses "$STATE_DIR/symbiotic_core_deployment_output.json")
+
+REWARDS_CORE_FILE=$(extract_json_addresses "$STATE_DIR/rewards_core_deployment_output.json")
+OPERATOR_REWARDS_FILE=$(extract_json_addresses "$STATE_DIR/operator_reward_deployment_output.json")
+STAKER_REWARDS_FILE=$(extract_json_addresses "$STATE_DIR/staker_reward_deployment_output.json")
+
+COLLATERAL_FILE=$(extract_json_addresses "$STATE_DIR/collateral_deployment_output.json")
+VAULT_FILE=$(extract_json_addresses "$STATE_DIR/vault_deployment_output.json")
+
+LIVENESS_SERVICE_MANAGER_FILE=$(extract_json_addresses "$STATE_DIR/liveness_service_manager_deployment_output.json")
+VALIDATION_MANAGER_FILE=$(extract_json_addresses "$STATE_DIR/validation_service_manager_deployment_output.json")
+
+echo -e "\n# RPC info"
+echo "export LIVENESS_RPC_URL=\"$(echo $LIVENESS_RPC_URL)\""
+echo "export LIVENESS_WS_URL=\"$(echo $LIVENESS_WS_URL)\""
+echo "export VALIDATION_RPC_URL=\"$(echo $VALIDATION_RPC_URL)\""
+echo "export VALIDATION_WS_URL=\"$(echo $VALIDATION_WS_URL)\""
+
+echo -e "\n# Account info"
+echo "export SYMBIOTIC_CORE_DEPLOYER_PRIVATE_KEY=\"$(echo $SYMBIOTIC_CORE_DEPLOYER_PRIVATE_KEY)\""
+echo "export SYMBIOTIC_CORE_DEPLOYER_ADDRESS=\"$(echo $SYMBIOTIC_CORE_DEPLOYER_ADDRESS)\""
+echo ""
+echo "export RADIUS_PRIVATE_KEY=\"$(echo $RADIUS_PRIVATE_KEY)\""
+echo "export RADIUS_ADDRESS=\"$(echo $RADIUS_ADDRESS)\""
+echo ""
+echo "export NETWORK_PRIVATE_KEY=\"$(echo $NETWORK_PRIVATE_KEY)\""
+echo "export NETWORK_ADDRESS=\"$(echo $NETWORK_ADDRESS)\""
+echo ""
+echo "export RADIUS_TOKEN_CONTRACT_OWNER_PRIVATE_KEY=\"$(echo $VAULT_OWNER_PRIVATE_KEY)\""
+echo "export RADIUS_TOKEN_CONTRACT_OWNER_ADDRESS=\"$(echo $VAULT_OWNER_ADDRESS)\""
+echo ""
+echo "export STETH_TOKEN_CONTRACT_OWNER_PRIVATE_KEY=\"$(echo $VAULT_OWNER_PRIVATE_KEY)\""
+echo "export STETH_TOKEN_CONTRACT_OWNER_ADDRESS=\"$(echo $VAULT_OWNER_ADDRESS)\""
+echo "export STETH_COLLATERAL_CONTRACT_OWNER_PRIVATE_KEY=\"$(echo $VAULT_OWNER_PRIVATE_KEY)\""
+echo "export STETH_COLLATERAL_CONTRACT_OWNER_ADDRESS=\"$(echo $VAULT_OWNER_ADDRESS)\""
+echo "export STETH_DELEGATOR_CONTRACT_OWNER_PRIVATE_KEY=\"$(echo $VAULT_OWNER_PRIVATE_KEY)\""
+echo "export STETH_DELEGATOR__CONTRACT_OWNER_ADDRESS=\"$(echo $VAULT_OWNER_ADDRESS)\""
+echo "export STETH_SLASHER_CONTRACT_OWNER_PRIVATE_KEY=\"$(echo $VAULT_OWNER_PRIVATE_KEY)\""
+echo "export STETH_SLASHER__CONTRACT_OWNER_ADDRESS=\"$(echo $VAULT_OWNER_ADDRESS)\""
+echo "export STETH_VAULT_CONTRACT_OWNER_PRIVATE_KEY=\"$(echo $VAULT_OWNER_PRIVATE_KEY)\""
+echo "export STETH_VAULT__CONTRACT_OWNER_ADDRESS=\"$(echo $VAULT_OWNER_ADDRESS)\""
+echo ""
+echo "export WBTC_TOKEN_CONTRACT_OWNER_PRIVATE_KEY=\"$(echo $VAULT_OWNER_PRIVATE_KEY)\""
+echo "export WBTC_TOKEN_CONTRACT_OWNER_ADDRESS=\"$(echo $VAULT_OWNER_ADDRESS)\""
+echo "export WBTC_COLLATERAL_CONTRACT_OWNER_PRIVATE_KEY=\"$(echo $VAULT_OWNER_PRIVATE_KEY)\""
+echo "export WBTC_COLLATERAL_CONTRACT_OWNER_ADDRESS=\"$(echo $VAULT_OWNER_ADDRESS)\""
+echo "export WBTC_DELEGATOR_CONTRACT_OWNER_PRIVATE_KEY=\"$(echo $VAULT_OWNER_PRIVATE_KEY)\""
+echo "export WBTC_DELEGATOR__CONTRACT_OWNER_ADDRESS=\"$(echo $VAULT_OWNER_ADDRESS)\""
+echo "export WBTC_SLASHER_CONTRACT_OWNER_PRIVATE_KEY=\"$(echo $VAULT_OWNER_PRIVATE_KEY)\""
+echo "export WBTC_SLASHER__CONTRACT_OWNER_ADDRESS=\"$(echo $VAULT_OWNER_ADDRESS)\""
+echo "export WBTC_VAULT_CONTRACT_OWNER_PRIVATE_KEY=\"$(echo $VAULT_OWNER_PRIVATE_KEY)\""
+echo "export WBTC_VAULT__CONTRACT_OWNER_ADDRESS=\"$(echo $VAULT_OWNER_ADDRESS)\""
 
 
-# Base Configurations
-echo -e "\n# Base Configurations"
-echo "export ROLLUP_ID=\"$ROLLUP_ID\""
-echo "export CLUSTER_ID=\"$CLUSTER_ID\""
-echo "export LIVENESS_RPC_URL=\"$LIVENESS_RPC_URL\""
-echo "export PRIVATE_KEY=\"$PRIVATE_KEY\""
-echo "export NETWORK_PRIVATE_KEY=\"$PRIVATE_KEY\""
-echo "export NETWORK_ADDRESS=\"$NETWORK_ADDRESS\""
-echo "export CHAIN_ID=\"$CHAIN_ID\""
+echo -e "\n# Symbiotic core deployment"
+echo "export DELEGATOR_FACTORY_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE_FILE | jq -r '.delegatorFactory')\""
+echo "export NETWORK_METADATA_SERVICE_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE_FILE | jq -r '.networkMetadataService')\""
+echo "export NETWORK_MIDDLEWARE_SERVICE_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE_FILE | jq -r '.networkMiddlewareService')\""
+echo "export NETWORK_REGISTRY_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE_FILE | jq -r '.networkRegistry')\""
+echo "export OPERATOR_METADATA_SERVICE_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE_FILE | jq -r '.operatorMetadataService')\""
+echo "export OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE_FILE | jq -r '.operatorNetworkOptInService')\""
+echo "export OPERATOR_REGISTRY_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE_FILE | jq -r '.operatorRegistry')\""
+echo "export OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE_FILE | jq -r '.operatorVaultOptInService')\""
+echo "export SLASHER_FACTORY_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE_FILE | jq -r '.slasherFactory')\""
+echo "export VAULT_CONFIGURATOR_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE_FILE | jq -r '.vaultConfigurator')\""
+echo "export VAULT_FACTORY_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE_FILE | jq -r '.vaultFactory')\""
 
-OWNER_ADDRESS=$NETWORK_ADDRESS
-echo "export OWNER_ADDRESS=\"$OWNER_ADDRESS\""
+echo -e "\n# Operator reward deployment"
+echo "export DEFAULT_OPERATOR_REWARD_CONTRACT_ADDRESS=\"$(echo $OPERATOR_REWARDS_FILE | jq -r '.defaultOperatorReward')\""
+echo "export DEFAULT_OPERATOR_REWARDS_FACTORY_CONTRACT_ADDRESS=\"$(echo $OPERATOR_REWARDS_FILE | jq -r '.defaultOperatorRewardsFactory')\""
+echo "export STETH_OPERATOR_REWARD_CONTRACT_ADDRESS=\"$(echo $OPERATOR_REWARDS_FILE | jq -r '.stETHOperatorReward')\""
+echo "export WBTC_OPERATOR_REWARD_CONTRACT_ADDRESS=\"$(echo $OPERATOR_REWARDS_FILE | jq -r '.wBTCOperatorReward')\""
 
-SUBNETWORK="${NETWORK_ADDRESS}000000000000000000000000"
-echo "export SUBNETWORK=\"$SUBNETWORK\""
+echo -e "\n# Staker reward deployment"
+echo "export DEFAULT_STAKER_REWARD_CONTRACT_ADDRESS=\"$(echo $STAKER_REWARDS_FILE | jq -r '.defaultStakerReward')\""
+echo "export DEFAULT_STAKER_REWARDS_FACTORY_CONTRACT_ADDRESS=\"$(echo $STAKER_REWARDS_FILE | jq -r '.defaultStakerRewardsFactory')\""
+echo "export STETH_STAKER_REWARD_CONTRACT_ADDRESS=\"$(echo $STAKER_REWARDS_FILE | jq -r '.stETHStakerReward')\""
+echo "export WBTC_STAKER_REWARD_CONTRACT_ADDRESS=\"$(echo $STAKER_REWARDS_FILE | jq -r '.wBTCStakerReward')\""
 
-echo "export MAX_SEQUENCER_NUMBER=\"$MAX_SEQUENCER_NUMBER\""
-echo "export ROLLUP_TYPE=\"$ROLLUP_TYPE\""
-echo "export ENCRYPTED_TRANSACTION_TYPE=\"$ENCRYPTED_TRANSACTION_TYPE\""
-echo "export LIVENESS_PLATFORM=\"$LIVENESS_PLATFORM\""
-echo "export LIVENESS_SERVICE_PROVIDER=\"$LIVENESS_SERVICE_PROVIDER\""
-echo "export ORDER_COMMITMENT_TYPE=\"$ORDER_COMMITMENT_TYPE\""
-echo "export EXECUTOR_ADDRESS=\"$EXECUTOR_ADDRESS\""
+echo -e "\n# Reward core deployment"
+echo "export REWARDS_CORE_CONTRACT_ADDRESS=\"$(echo $REWARDS_CORE_FILE | jq -r '.rewardsCore')\""
 
-# Defult Operators Accounts
-echo -e "\n# Operator Accounts"
-echo "export DEFAULT_OPERATOR_ADDRESS=\"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\""
-echo "export DEFAULT_OPERATOR_PRIVATE_KEY=\"0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80\""
-echo "export WBTC_OPERATOR_ADDRESS=\"0x70997970C51812dc3A010C7d01b50e0d17dc79C8\""
-echo "export WBTC_OPERATOR_PRIVATE_KEY=\"0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d\""
-echo "export STETH_OPERATOR_ADDRESS=\"0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC\""
-echo "export STETH_OPERATOR_PRIVATE_KEY=\"0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a\""
+echo -e "\n# Collateral deployment"
+echo "export DEFAULT_COLLATERAL_CONTRACT_ADDRESS=\"$(echo $COLLATERAL_FILE | jq -r '.defaultCollateral')\""
+echo "export DEFAULT_COLLATERAL_FACTORY_CONTRACT_ADDRESS=\"$(echo $COLLATERAL_FILE | jq -r '.defaultCollateralFactory')\""
+echo "export STETH_COLLATERAL_CONTRACT_ADDRESS=\"$(echo $COLLATERAL_FILE | jq -r '.stETHCollateral')\""
+echo "export WBTC_COLLATERAL_CONTRACT_ADDRESS=\"$(echo $COLLATERAL_FILE | jq -r '.wBTCCollateral')\""
+echo "export RADIUS_TOKEN_CONTRACT_ADDRESS=\"$(echo $COLLATERAL_FILE | jq -r '.radiusTestERC20')\""
+echo "export STETH_TOKEN_CONTRACT_ADDRESS=\"$(echo $COLLATERAL_FILE | jq -r '.stETHTestERC20')\""
+echo "export WBTC_TOKEN_CONTRACT_ADDRESS=\"$(echo $COLLATERAL_FILE | jq -r '.wBTCTestERC20')\""
 
-echo -e "\n# Symbiotic (Local)"
-echo "export NETWORK_MIDDLEWARE_SERVICE_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE | jq -r '.networkMiddlewareService')\""
-echo "export OPERATOR_REGISTRY_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE | jq -r '.operatorRegistry')\""
-echo "export NETWORK_REGISTRY_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE | jq -r '.networkRegistry')\""
-echo "export OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE | jq -r '.operatorNetworkOptInService')\""
-echo "export OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE | jq -r '.operatorVaultOptInService')\""
-echo "export VAULT_FACTORY_CONTRACT_ADDRESS=\"$(echo $SYMBIOTIC_CORE | jq -r '.vaultFactory')\""
+echo -e "\n# Vault deployment"
+echo "export DEFAULT_DELEGATOR_CONTRACT_ADDRESS=\"$(echo $VAULT_FILE | jq -r '.defaultDelegator')\""
+echo "export DEFAULT_SLASHER_CONTRACT_ADDRESS=\"$(echo $VAULT_FILE | jq -r '.defaultSlasher')\""
+echo "export DEFAULT_VAULT_CONTRACT_ADDRESS=\"$(echo $VAULT_FILE | jq -r '.defaultVault')\""
+echo "export STETH_DELEGATOR_CONTRACT_ADDRESS=\"$(echo $VAULT_FILE | jq -r '.stETHDelegator')\""
+echo "export STETH_SLASHER_CONTRACT_ADDRESS=\"$(echo $VAULT_FILE | jq -r '.stETHSlasher')\""
+echo "export STETH_VAULT_CONTRACT_ADDRESS=\"$(echo $VAULT_FILE | jq -r '.stETHVault')\""
+echo "export WBTC_DELEGATOR_CONTRACT_ADDRESS=\"$(echo $VAULT_FILE | jq -r '.wBTCDelegator')\""
+echo "export WBTC_SLASHER_CONTRACT_ADDRESS=\"$(echo $VAULT_FILE | jq -r '.wBTCSlasher')\""
+echo "export WBTC_VAULT_CONTRACT_ADDRESS=\"$(echo $VAULT_FILE | jq -r '.wBTCVault')\""
 
+echo -e "\n# Liveness deployment"
+echo "export LIVENESS_SERVICE_MANAGER_CONTRACT_ADDRESS=\"$(echo $LIVENESS_SERVICE_MANAGER_FILE | jq -r '.livenessServiceManager')\""
 
-
-echo -e '\n# Token & Vault Contract Owner'
-echo "export TOKEN_CONTRACT_OWNER_ADDRESS=\"$NETWORK_ADDRESS\""
-echo "export TOKEN_CONTRACT_OWNER_PRIVATE_KEY=\"$PRIVATE_KEY\""
-echo "export VAULT_OWNER_ADDRESS=\"$NETWORK_ADDRESS\""
-echo "export VAULT_OWNER_PRIVATE_KEY=\"$PRIVATE_KEY\""
-
-echo -e "\n# Token Accounts"
-echo "export DEFAULT_ACCOUNT_ADDRESS=\"0xa0Ee7A142d267C1f36714E4a8F75612F20a79720\""
-echo "export DEFAULT_ACCOUNT_PRIVATE_KEY=\"0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6\""
-echo "export WBTC_ACCOUNT_ADDRESS=\"0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f\""
-echo "export WBTC_ACCOUNT_PRIVATE_KEY=\"0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97\""
-echo "export STETH_ACCOUNT_ADDRESS=\"0x14dC79964da2C08b23698B3D3cc7Ca32193d9955\""
-echo "export STETH_ACCOUNT_PRIVATE_KEY=\"0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356\""
-
-
-# Vault Configuration for all tokens
-echo -e "\n# Vault Configurations"
-echo "export DEFAULT_VAULT_ADDRESS=\"$(echo $VAULT | jq -r '.defaultVault')\""
-echo "export DEFAULT_DELEGATOR_ADDRESS=\"$(echo $VAULT | jq -r '.defaultDelegator')\""
-echo "export WBTC_VAULT_ADDRESS=\"$(echo $VAULT | jq -r '.wBTCVault')\""
-echo "export WBTC_DELEGATOR_ADDRESS=\"$(echo $VAULT | jq -r '.wBTCDelegator')\""
-echo "export STETH_VAULT_ADDRESS=\"$(echo $VAULT | jq -r '.stETHVault')\""
-echo "export STETH_DELEGATOR_ADDRESS=\"$(echo $VAULT | jq -r '.stETHDelegator')\""
-
-echo -e "\n# Liveness"
-echo "export LIVENESS_CONTRACT_ADDRESS=\"$(echo $LIVENESS_SERVICE_MANAGER | jq -r '.livenessServiceManager')\""
-
-echo -e "\n# Validation Service Manager"
-echo "export VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS=\"$(echo $VALIDATION_MANAGER | jq -r '.validationServiceManager')\""
-
-# Collateral Configuration for all tokens
-echo -e "\n# Collateral Configurations"
-echo "export DEFAULT_TOKEN_ADDRESS=\"$(echo $COLLATERAL | jq -r '.radiusTestERC20')\""
-echo "export DEFAULT_COLLATERAL_ADDRESS=\"$(echo $COLLATERAL | jq -r '.defaultCollateral')\""
-echo "export WBTC_TOKEN_ADDRESS=\"$(echo $COLLATERAL | jq -r '.wBTCTestERC20')\""
-echo "export WBTC_COLLATERAL_ADDRESS=\"$(echo $COLLATERAL | jq -r '.wBTCCollateral')\""
-echo "export STETH_TOKEN_ADDRESS=\"$(echo $COLLATERAL | jq -r '.stETHTestERC20')\""
-echo "export STETH_COLLATERAL_ADDRESS=\"$(echo $COLLATERAL | jq -r '.stETHCollateral')\""
-
-echo -e "\n# Rewards Core"
-echo "export REWARDS_CORE_ADDRESS=\"$(echo $REWARDS_CORE | jq -r '.rewardsCore')\""
-
-echo -e "\n# Default Operator Rewards"
-echo "export DEFAULT_OPERATOR_REWARDS=\"$(echo $OPERATOR_REWARDS | jq -r '.defaultOperatorReward')\""
-echo "export STETH_OPERATOR_REWARDS=\"$(echo $OPERATOR_REWARDS | jq -r '.stETHOperatorReward')\""
-echo "export WBTC_OPERATOR_REWARDS=\"$(echo $OPERATOR_REWARDS | jq -r '.wBTCOperatorReward')\""
-
-echo -e "\n# Default Staker Rewards"
-echo "export DEFAULT_STAKER_REWARDS=\"$(echo $STAKER_REWARDS | jq -r '.defaultStakerReward')\""
-echo "export STETH_STAKER_REWARDS=\"$(echo $STAKER_REWARDS | jq -r '.stETHStakerReward')\""
-echo "export WBTC_STAKER_REWARDS=\"$(echo $STAKER_REWARDS | jq -r '.wBTCStakerReward')\""
+echo -e "\n# Validation deployment"
+echo "export VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS=\"$(echo $VALIDATION_MANAGER_FILE | jq -r '.validationServiceManager')\""

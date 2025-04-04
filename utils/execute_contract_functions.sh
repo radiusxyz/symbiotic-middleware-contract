@@ -1,36 +1,32 @@
 #!/bin/bash
 
 # # STETH Token Setup
-cast send $STETH_TOKEN_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
+cast send $STETH_TOKEN_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $STETH_TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
 "transfer(address,uint256)" $STETH_ACCOUNT_ADDRESS 50000
 
-cast call $STETH_TOKEN_ADDRESS --rpc-url $LIVENESS_RPC_URL \
+cast call $STETH_TOKEN_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "balanceOf(address)(uint256)" $STETH_ACCOUNT_ADDRESS
 
-cast send $STETH_TOKEN_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $STETH_ACCOUNT_PRIVATE_KEY \
-"approve(address spender, uint256 value)(bool)" $STETH_COLLATERAL_ADDRESS 50000 
+cast send $STETH_TOKEN_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $STETH_TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
+"approve(address spender, uint256 value)(bool)" $STETH_COLLATERAL_CONTRACT_ADDRESS 50000 
 
-cast call $STETH_TOKEN_ADDRESS --rpc-url $LIVENESS_RPC_URL \
-"allowance(address,address)(uint256)" $STETH_ACCOUNT_ADDRESS $STETH_COLLATERAL_ADDRESS
+cast call $STETH_TOKEN_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
+"allowance(address,address)(uint256)" $STETH_ACCOUNT_ADDRESS $STETH_COLLATERAL_CONTRACT_ADDRESS
 
-cast send $STETH_COLLATERAL_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $STETH_ACCOUNT_PRIVATE_KEY \
+cast send $STETH_COLLATERAL_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $STETH_TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
 "deposit(address recipient, uint256 amount)(uint256)" $STETH_ACCOUNT_ADDRESS 50000 
 
-cast call $STETH_TOKEN_ADDRESS --rpc-url $LIVENESS_RPC_URL \
+cast call $STETH_TOKEN_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "balanceOf(address)(uint256)" $STETH_ACCOUNT_ADDRESS
 
-
-
-cast send $STETH_COLLATERAL_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $STETH_ACCOUNT_PRIVATE_KEY \
+cast send $STETH_COLLATERAL_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $STETH_TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
 "approve(address spender, uint256 value)(bool)" $STETH_VAULT_ADDRESS 50000
 
-cast send $STETH_VAULT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $STETH_ACCOUNT_PRIVATE_KEY \
+cast send $STETH_VAULT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $STETH_TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
 "deposit(address onBehalfOf, uint256 amount)(uint256 depositedAmount, uint256 mintedShares)" $STETH_ACCOUNT_ADDRESS 50000
 
 cast call $STETH_VAULT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "activeSharesOf(address)(uint256)" $STETH_ACCOUNT_ADDRESS
-
-
 
 # Register Network
 cast send $NETWORK_REGISTRY_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
@@ -48,27 +44,25 @@ cast send $NETWORK_MIDDLEWARE_SERVICE_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_U
 cast call $NETWORK_MIDDLEWARE_SERVICE_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
 "middleware(address)(address)" $NETWORK_ADDRESS
 
-
-
 #####################################################################################################################################
 # Register Tokens with Validation Service Manager
 cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"registerToken(address token)" $STETH_TOKEN_ADDRESS --gas-limit 200000
+"registerToken(address token)" $STETH_TOKEN_CONTRACT_ADDRESS --gas-limit 200000
 
 # Verify token registration
 cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
-"isActiveToken(address)(bool)" $STETH_TOKEN_ADDRESS
+"isActiveToken(address)(bool)" $STETH_TOKEN_CONTRACT_ADDRESS
 
 cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL "getCurrentTokens()(address[])"
 
 #####################################################################################################################################
 # Register vault
 cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"registerVault(address vault, address stakerRewards, address operatorRewards)" $STETH_VAULT_ADDRESS $STETH_STAKER_REWARDS $STETH_OPERATOR_REWARDS
+"registerVault(address vault, address stakerRewards, address operatorRewards)" $STETH_VAULT_CONTRACT_ADDRESS $STETH_STAKER_REWARD_CONTRACT_ADDRESS $STETH_OPERATOR_REWARDS_CONTRACT_ADDRESS
 
 cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $LIVENESS_RPC_URL \
   "isActiveVault(address vault)(bool)" \
-  $STETH_VAULT_ADDRESS
+  $STETH_VAULT_ADDRESS_CONTRACT_ADDRESS
 #####################################################################################################################################
 
 # Register Operators with Validation Service Manager
