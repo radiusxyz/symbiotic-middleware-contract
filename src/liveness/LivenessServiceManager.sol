@@ -2,7 +2,7 @@
 pragma solidity ^0.8.25;
 
 import {Ownable} from "@openzeppelin-contracts/contracts/access/Ownable.sol";
-import "./interfaces/ILivenessServiceManager.sol";
+import "src/interfaces/ILivenessServiceManager.sol";
 
 contract LivenessServiceManager is Ownable, ILivenessServiceManager {
     uint256 public constant BLOCK_MARGIN = 7;
