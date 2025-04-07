@@ -3,8 +3,8 @@ pragma solidity 0.8.25;
 
 import {Utils} from "../utils/Utils.sol";
 import {Script} from "forge-std/src/Script.sol";
-import {RewardsCore} from "../../src/rewards/RewardsCore.sol";
-import {ValidationServiceManager} from "../../src/ValidationServiceManager.sol";
+import {RewardsCore} from "../../src/contracts/RewardsCore.sol";
+import {ValidationServiceManager} from "../../src/contracts/ValidationServiceManager.sol";
 
 contract RewardsCoreDeploy is Script, Utils {
     function run() external {

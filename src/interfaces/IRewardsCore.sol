@@ -76,6 +76,7 @@ interface IRewardsCore {
 
 
     // Errors
+    error NotAuthorized(address sender);
     error ConfigNotActive();
     error TooEarlyForDistribution();
     error InsufficientBalance();
