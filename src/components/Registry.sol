@@ -4,6 +4,7 @@ pragma solidity 0.8.25;
 import {Time} from "@openzeppelin-contracts/contracts/utils/types/Time.sol";
 import {Ownable} from "@openzeppelin-contracts/contracts/access/Ownable.sol";
 import {EnumerableMap} from "@openzeppelin-contracts/contracts/utils/structs/EnumerableMap.sol";
+import {Checkpoints} from "@openzeppelin-contracts/contracts/utils/structs/Checkpoints.sol";
 import {IRegistry} from "@symbiotic-core/src/interfaces/common/IRegistry.sol";
 import {IEntity} from "@symbiotic-core/src/interfaces/common/IEntity.sol";
 import {IVault} from "@symbiotic-core/src/interfaces/vault/IVault.sol";
@@ -13,12 +14,12 @@ import {Subnetwork} from "@symbiotic-core/src/contracts/libraries/Subnetwork.sol
 import {ICollateral} from "@symbiotic-collateral/src/interfaces/ICollateral.sol";
 
 import {MapWithTimeData} from "src/libraries/MapWithTimeData.sol";
-import {OperatingRegistry} from "./OperatingRegistry.sol";
 import {IValidationServiceManager} from "src/interfaces/IValidationServiceManager.sol";
 
 contract Registry is Ownable {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
     using MapWithTimeData for EnumerableMap.AddressToUintMap;
+    using Checkpoints for Checkpoints.Trace208;
     using Subnetwork for address;
 
     address public immutable NETWORK;
@@ -42,6 +43,15 @@ contract Registry is Ownable {
 
     mapping(address => IValidationServiceManager.Vault) public vaultDetails;
     mapping(address => uint256) public minimumStakingAmounts;
+
+    // Operating Registry state variables integrated directly into Registry
+    mapping(address => Checkpoints.Trace208) private operatorToIndex;
+    mapping(address => address) private operatingToOperator;
+    mapping(uint208 => address) private indexToOperating;
+    uint208 private totalOperatingCount;
+    uint208 internal constant EMPTY_OPERATING_ADDRESS_INDEX = 0;
+
+    error DuplicateOperatingAddress();
 
     constructor(
         address _network,
@@ -103,6 +113,57 @@ contract Registry is Ownable {
         );
     }
 
+    ///////////// Operating Registry Functions Integrated
+    function getOperatorWithOperatingAddress(address operating) public view returns (address) {
+        return operatingToOperator[operating];
+    }
+
+    function getCurrentOperatingAddress(address operator) public view returns (address) {
+        uint208 operatingIndex = operatorToIndex[operator].latest();
+
+        if (operatingIndex == EMPTY_OPERATING_ADDRESS_INDEX) {
+            return address(0);
+        }
+
+        return indexToOperating[operatingIndex];
+    }
+
+    function getOperatingAddressAt(address operator, uint48 timestamp) public view returns (address) {
+        uint208 operatingIndex = operatorToIndex[operator].upperLookup(timestamp);
+
+        if (operatingIndex == EMPTY_OPERATING_ADDRESS_INDEX) {
+            return address(0);
+        }
+
+        return indexToOperating[operatingIndex];
+    }
+
+    function _initOperatingAddress(address operator, address operating) internal {
+        if (operatingToOperator[operating] != address(0)) {
+            revert DuplicateOperatingAddress();
+        }
+
+        uint208 newIndex = ++totalOperatingCount;
+        indexToOperating[newIndex] = operating;
+        operatorToIndex[operator].push(Time.timestamp(), newIndex);
+        operatingToOperator[operating] = operator;
+    }
+
+    function _updateOperatingAddress(address operator, address newOperating) internal {
+        if (operatingToOperator[newOperating] != address(0)) {
+            revert DuplicateOperatingAddress();
+        }
+
+        address currentOperating = getCurrentOperatingAddress(operator);
+        uint208 operatingIndex = operatorToIndex[operator].latest();
+
+        indexToOperating[operatingIndex] = newOperating;
+        
+        operatingToOperator[newOperating] = operator;
+
+        delete operatingToOperator[currentOperating];
+    }
+
     ///////////// Operator management
     function registerOperator(address operator, address operating) external onlyOwner {
         if (operators.contains(operator)) {
@@ -113,6 +174,7 @@ contract Registry is Ownable {
             revert IValidationServiceManager.OperatorNotOptedIn();
         }
 
+        // Initialize both the operator registry and operating registry
         _initOperatingAddress(operator, operating);
 
         operators.add(operator);
@@ -137,7 +199,12 @@ contract Registry is Ownable {
         }
 
         operators.remove(operator);
-        _updateOperatingAddress(operator, address(0));
+        
+        // Update the operating address mapping to clear it
+        address operating = getCurrentOperatingAddress(operator);
+        if (operating != address(0)) {
+            delete operatingToOperator[operating];
+        }
         
         emit IValidationServiceManager.UnregisterOperator(operator);
     }
@@ -447,24 +514,35 @@ contract Registry is Ownable {
         for (uint256 i; i < vaultCount; ++i) {
             (address vault, uint48 enabledTime, uint48 disabledTime) = vaults.atWithTimes(i);
             
+            // Bail early if vault isn't active
+            if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
+                continue;
+            }
+            
             address checkToken = getTokenAddress(IVault(vault).collateral());
-
+            // Bail early if token doesn't match
             if (checkToken != token) {
                 continue;
             }
 
-            if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
-                continue;
-            }
-
-            for (uint96 j = 0; j < subnetworkCount; ++j) {
-                stakeAmount += IBaseDelegator(IVault(vault).delegator()).stakeAt(
-                    NETWORK.subnetwork(j), operator, epochStartTs, new bytes(0)
-                );
-            }
+            // Pull this out to a helper function to reduce stack depth
+            stakeAmount += _getOperatorVaultStake(vault, operator, epochStartTs);
         }
 
         return stakeAmount;
+    }
+
+    function _getOperatorVaultStake(
+        address vault, 
+        address operator, 
+        uint48 timestamp
+    ) internal view returns (uint256 totalStake) {
+        for (uint96 j = 0; j < subnetworkCount; ++j) {
+            totalStake += IBaseDelegator(IVault(vault).delegator()).stakeAt(
+                NETWORK.subnetwork(j), operator, timestamp, new bytes(0)
+            );
+        }
+        return totalStake;
     }
 
     function getCurrentOperatorAllTokenStakes(address operator) public view returns (IValidationServiceManager.StakeInfo[] memory tokenStakes) {
@@ -546,7 +624,7 @@ contract Registry is Ownable {
 
     function checkIncludingOperatingAddress(address currentOperating) public view returns (bool) {
         address currentOperator = getOperatorWithOperatingAddress(currentOperating);
-        if (!operators.contains(currentOperator)) {
+        if (currentOperator == address(0) || !operators.contains(currentOperator)) {
             revert IValidationServiceManager.OperatorNotRegistered();
         }
 
@@ -565,15 +643,22 @@ contract Registry is Ownable {
         bool hasEnoughStake = false;
         uint256 tokenCount = tokens.length();
 
-        for (uint256 i; i < tokenCount; ++i) {
+        for (uint256 i; i < tokenCount && !hasEnoughStake; ++i) {
             (address token, uint48 tokenEnabledTime, uint48 tokenDisabledTime) = tokens.atWithTimes(i);
 
             if (!_wasActiveAt(tokenEnabledTime, tokenDisabledTime, epochStartTs)) {
                 continue;
             }
 
+            uint256 minimumStake = minimumStakingAmounts[token];
+            if (minimumStake == 0) {
+                // If no minimum stake is set, any token is considered valid
+                hasEnoughStake = true;
+                break;
+            }
+
             uint256 tokenStake = getOperatorTokenStake(currentOperator, token, epochStartTs);
-            if (tokenStake >= minimumStakingAmounts[token]) {
+            if (tokenStake >= minimumStake) {
                 hasEnoughStake = true;
                 break;
             }
@@ -598,10 +683,4 @@ contract Registry is Ownable {
             revert IValidationServiceManager.InvalidEpoch();
         }
     }
-
-    // These functions need to be implemented for compatibility with OperatingRegistry
-    function _initOperatingAddress(address operator, address operating) internal virtual {}
-    function _updateOperatingAddress(address operator, address operating) internal virtual {}
-    function getOperatingAddressAt(address operator, uint48 timestamp) public view virtual returns (address) {}
-    function getOperatorWithOperatingAddress(address operating) public view virtual returns (address) {}
 }

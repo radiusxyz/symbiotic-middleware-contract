@@ -19,11 +19,8 @@ contract TaskManager is Ownable {
     
     function createNewTask(
         IValidationServiceManager.Task calldata task,
-        IValidationServiceManager.DistributionParams calldata distributionParams,
-        function(address) external view returns (bool) checkOperator
+        IValidationServiceManager.DistributionParams calldata distributionParams
     ) external {
-        require(checkOperator(msg.sender), "Operator not registered");
-
         uint256 latestTaskNumber = rollupTaskInfos[task.rollupId].latestTaskNumber;
         rollupTaskInfos[task.rollupId].latestTaskNumber = latestTaskNumber + 1;
         rollupTaskInfos[task.rollupId].blockCommitments[latestTaskNumber] = task.blockCommitment;
@@ -39,10 +36,8 @@ contract TaskManager is Ownable {
         string calldata clusterId,
         string calldata rollupId,
         uint256 referenceTaskIndex,
-        bool response,
-        function(address) external view returns (bool) checkOperator
+        bool response
     ) external {
-        require(checkOperator(msg.sender), "Operator is not registered");
         require(
             rollupTaskInfos[rollupId].taskResponses[msg.sender][referenceTaskIndex] == false,
             "Operator has already responded to the task"

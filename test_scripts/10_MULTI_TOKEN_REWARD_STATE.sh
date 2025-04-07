@@ -331,37 +331,37 @@ cast send $STETH_DELEGATOR_ADDRESS --rpc-url $RPC_URL --private-key $VAULT_OWNER
 "setOperatorNetworkShares(bytes32 subnetwork, address operator, uint256 shares)" $SUBNETWORK $STETH_OPERATOR_ADDRESS_SECONDARY 3000
 
 # # Initialize Cluster
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_SEQUENCER_NUMBER
 
 # # Add Rollup
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "addRollup(string,(string,address,string,string,string,address,(string,string,address)))" \
 "$CLUSTER_ID" "($ROLLUP_ID, $OWNER_ADDRESS, $ROLLUP_TYPE, $ENCRYPTED_TRANSACTION_TYPE, $ORDER_COMMITMENT_TYPE, $EXECUTOR_ADDRESS, ($PLATFORM, $SERVICE_PROVIDER, $VALIDATION_ADDRESS))"
 
 # # Register Rollup Executor
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "registerRollupExecutor(string clusterId, string rollupId, address executorAddress)" $CLUSTER_ID $ROLLUP_ID $EXECUTOR_ADDRESS
 
 # # Register Sequencers
 
 echo "REGISTER SEQUENCER" 
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY \
 "registerTxOrderer(string clusterId)" $CLUSTER_ID
 
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $WBTC_OPERATOR_PRIVATE_KEY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $WBTC_OPERATOR_PRIVATE_KEY \
 "registerTxOrderer(string clusterId)" $CLUSTER_ID
 
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $STETH_OPERATOR_PRIVATE_KEY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $STETH_OPERATOR_PRIVATE_KEY \
 "registerTxOrderer(string clusterId)" $CLUSTER_ID
 
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY_SECONDARY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY_SECONDARY \
 "registerTxOrderer(string clusterId)" $CLUSTER_ID
 
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $WBTC_OPERATOR_PRIVATE_KEY_SECONDARY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $WBTC_OPERATOR_PRIVATE_KEY_SECONDARY \
 "registerTxOrderer(string clusterId)" $CLUSTER_ID
 
-cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $STETH_OPERATOR_PRIVATE_KEY_SECONDARY \
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $STETH_OPERATOR_PRIVATE_KEY_SECONDARY \
 "registerTxOrderer(string clusterId)" $CLUSTER_ID
 
 # # # Setup Rewards

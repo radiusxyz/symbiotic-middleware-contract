@@ -13,7 +13,6 @@ import {RewardsManager} from "src/components/RewardsManager.sol";
 import {SlashingManager} from "src/components/SlashingManager.sol";
 import {TaskManager} from "src/components/TaskManager.sol";
 import {LivenessServiceManager} from "src/components/LivenessServiceManager.sol";
-import {OperatingRegistry} from "src/components/OperatingRegistry.sol";
 import {IRewardsCore} from "src/interfaces/IRewardsCore.sol";
 import {IDefaultOperatorRewards} from "@symbiotic-rewards/src/interfaces/defaultOperatorRewards/IDefaultOperatorRewards.sol";
 import {IDefaultStakerRewards} from "@symbiotic-rewards/src/interfaces/defaultStakerRewards/IDefaultStakerRewards.sol";
@@ -22,7 +21,7 @@ import {ISlasher} from "@symbiotic-core/src/interfaces/slasher/ISlasher.sol";
 import {IVetoSlasher} from "@symbiotic-core/src/interfaces/slasher/IVetoSlasher.sol";
 import {ILivenessServiceManager} from "src/interfaces/ILivenessServiceManager.sol";
 
-contract ValidationServiceManager is Ownable, IValidationServiceManager, OperatingRegistry, ReentrancyGuard {
+contract ValidationServiceManager is Ownable, IValidationServiceManager, ReentrancyGuard {
     using SafeERC20 for IERC20;
     
     Registry public registry;
@@ -39,32 +38,21 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
 
     constructor(
         address _network,
-        address _vaultRegistry,
-        address _operatorNetOptIn,
-        uint48 _epochDuration,
-        address _staker_rewards_registry,
-        address _operator_rewards_registry,
         address _rewards_core_address,
-        address _slasher_register
+        address _registry,
+        address _rewardsManager,
+        address _slashingManager,
+        address _taskManager,
+        address _livenessServiceManager
     ) Ownable(msg.sender) {
         NETWORK = _network;
         REWARDS_CORE_ADDRESS = _rewards_core_address;
-
-        // Initialize the component contracts
-        registry = new Registry(
-            _network,
-            _vaultRegistry,
-            _operatorNetOptIn,
-            _epochDuration,
-            _staker_rewards_registry,
-            _operator_rewards_registry,
-            _slasher_register
-        );
         
-        rewardsManager = new RewardsManager();
-        slashingManager = new SlashingManager(_network);
-        taskManager = new TaskManager();
-        livenessServiceManager = new LivenessServiceManager();
+        registry = Registry(_registry);
+        rewardsManager = RewardsManager(_rewardsManager);
+        slashingManager = SlashingManager(_slashingManager);
+        taskManager = TaskManager(_taskManager);
+        livenessServiceManager = LivenessServiceManager(_livenessServiceManager);
     }
 
     // Registry Methods
@@ -220,22 +208,18 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         registry.calcAndCacheStakes(epoch);
     }
 
-    function checkIncludingOperatingAddress(address currentOperating) public view returns (bool) {
-        return registry.checkIncludingOperatingAddress(currentOperating);
-    }
-
     // Task Manager Methods
     function createNewTask(
         Task calldata task,
         DistributionParams calldata distributionParams
     ) external {
-        require(checkIncludingOperatingAddress(msg.sender), "Operator not registered");
+        require(registry.checkIncludingOperatingAddress(msg.sender), "Operator not registered");
 
         // Verify that the cluster and rollup are properly registered in the liveness manager
-        require(livenessServiceManager.isRollupAdded(task.clusterId, task.rollupId), "Rollup not registered in liveness manager");
+        // require(livenessServiceManager.isRollupAdded(task.clusterId, task.rollupId), "Rollup not registered in liveness manager");
         
         uint256 latestTaskNumber = taskManager.getLatestTaskNumber(task.rollupId);
-        taskManager.createNewTask(task, distributionParams, this.checkIncludingOperatingAddress);
+        taskManager.createNewTask(task, distributionParams);
         
         if (latestTaskNumber > 0 && distributionParams.operatorMerkleRoots.length > 0) {
             rewardsManager.storeDistributionData(task.clusterId, task.rollupId, distributionParams.rewardedTaskindex, distributionParams);
@@ -248,11 +232,13 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         uint256 referenceTaskIndex,
         bool response
     ) external {
+        require(registry.checkIncludingOperatingAddress(msg.sender), "Operator not registered");
+
         // Verify that the sender is registered as an executor for this rollup
-        require(livenessServiceManager.isRollupExecutorRegistered(clusterId, rollupId, msg.sender), 
-                "Not registered as executor for this rollup");
+        // require(livenessServiceManager.isRollupExecutorRegistered(clusterId, rollupId, msg.sender), 
+        //         "Not registered as executor for this rollup");
         
-        taskManager.respondToTask(clusterId, rollupId, referenceTaskIndex, response, this.checkIncludingOperatingAddress);
+        taskManager.respondToTask(clusterId, rollupId, referenceTaskIndex, response);
     }
 
     // Distribution Methods
@@ -546,70 +532,70 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Operati
         return slashingManager.getSlashRequestDetails(txHash);
     }
 
-    // Liveness Manager Methods
-    function initializeCluster(string calldata clusterId, uint256 maxTxOrdererNumber) external {
-        livenessServiceManager.initializeCluster(clusterId, maxTxOrdererNumber, msg.sender);
-    }
+    // // Liveness Manager Methods
+    // function initializeCluster(string calldata clusterId, uint256 maxTxOrdererNumber) external {
+    //     livenessServiceManager.initializeCluster(clusterId, maxTxOrdererNumber, msg.sender);
+    // }
 
-    function getAllClusterIds() external view returns (string[] memory) {
-        return livenessServiceManager.getAllClusterIds();
-    }
+    // function getAllClusterIds() external view returns (string[] memory) {
+    //     return livenessServiceManager.getAllClusterIds();
+    // }
 
-    function getMaxTxOrdererNumber(string calldata clusterId) external view returns (uint256) {
-        return livenessServiceManager.getMaxTxOrdererNumber(clusterId);
-    }
+    // function getMaxTxOrdererNumber(string calldata clusterId) external view returns (uint256) {
+    //     return livenessServiceManager.getMaxTxOrdererNumber(clusterId);
+    // }
 
-    function getClusterIdsByOwner(address owner) external view returns (string[] memory) {
-        return livenessServiceManager.getClusterIdsByOwner(owner);
-    }
+    // function getClusterIdsByOwner(address owner) external view returns (string[] memory) {
+    //     return livenessServiceManager.getClusterIdsByOwner(owner);
+    // }
 
-    function getClusterIdsByTxOrderer(address txOrderer) external view returns (string[] memory) {
-        return livenessServiceManager.getClusterIdsByTxOrderer(txOrderer);
-    }
+    // function getClusterIdsByTxOrderer(address txOrderer) external view returns (string[] memory) {
+    //     return livenessServiceManager.getClusterIdsByTxOrderer(txOrderer);
+    // }
 
-    function addRollup(string calldata clusterId, ILivenessServiceManager.NewRollup calldata newRollup) external {
-        // Add validation to ensure that validation service manager's address is correct
-        require(newRollup.validationInfo.validationServiceManager == address(this), 
-                "Invalid validation service manager address");
+    // function addRollup(string calldata clusterId, ILivenessServiceManager.NewRollup calldata newRollup) external {
+    //     // Add validation to ensure that validation service manager's address is correct
+    //     require(newRollup.validationInfo.validationServiceManager == address(this), 
+    //             "Invalid validation service manager address");
         
-        livenessServiceManager.addRollup(clusterId, newRollup, msg.sender);
-    }
+    //     livenessServiceManager.addRollup(clusterId, newRollup, msg.sender);
+    // }
 
-    function isRollupAdded(string calldata clusterId, string calldata rollupId) external view returns (bool) {
-        return livenessServiceManager.isRollupAdded(clusterId, rollupId);
-    }
+    // function isRollupAdded(string calldata clusterId, string calldata rollupId) external view returns (bool) {
+    //     return livenessServiceManager.isRollupAdded(clusterId, rollupId);
+    // }
 
-    function getRollups(string calldata clusterId) external view returns (ILivenessServiceManager.Rollup[] memory) {
-        return livenessServiceManager.getRollups(clusterId);
-    }
+    // function getRollups(string calldata clusterId) external view returns (ILivenessServiceManager.Rollup[] memory) {
+    //     return livenessServiceManager.getRollups(clusterId);
+    // }
 
-    function getRollup(string calldata clusterId, string calldata rollupId) external view returns (ILivenessServiceManager.Rollup memory) {
-        return livenessServiceManager.getRollup(clusterId, rollupId);
-    }
+    // function getRollup(string calldata clusterId, string calldata rollupId) external view returns (ILivenessServiceManager.Rollup memory) {
+    //     return livenessServiceManager.getRollup(clusterId, rollupId);
+    // }
 
-    function registerTxOrderer(string calldata clusterId) external {
-        livenessServiceManager.registerTxOrderer(clusterId, msg.sender);
-    }
+    // function registerTxOrderer(string calldata clusterId) external {
+    //     livenessServiceManager.registerTxOrderer(clusterId, msg.sender);
+    // }
 
-    function deregisterTxOrderer(string calldata clusterId) external {
-        livenessServiceManager.deregisterTxOrderer(clusterId, msg.sender);
-    }
+    // function deregisterTxOrderer(string calldata clusterId) external {
+    //     livenessServiceManager.deregisterTxOrderer(clusterId, msg.sender);
+    // }
 
-    function getTxOrderers(string calldata clusterId) external view returns (address[] memory) {
-        return livenessServiceManager.getTxOrderers(clusterId);
-    }
+    // function getTxOrderers(string calldata clusterId) external view returns (address[] memory) {
+    //     return livenessServiceManager.getTxOrderers(clusterId);
+    // }
 
-    function registerRollupExecutor(string calldata clusterId, string calldata rollupId, address executor) external {
-        livenessServiceManager.registerRollupExecutor(clusterId, rollupId, executor, msg.sender);
-    }
+    // function registerRollupExecutor(string calldata clusterId, string calldata rollupId, address executor) external {
+    //     livenessServiceManager.registerRollupExecutor(clusterId, rollupId, executor, msg.sender);
+    // }
 
-    function getExecutors(string calldata clusterId, string calldata rollupId) external view returns (address[] memory) {
-        return livenessServiceManager.getExecutors(clusterId, rollupId);
-    }
+    // function getExecutors(string calldata clusterId, string calldata rollupId) external view returns (address[] memory) {
+    //     return livenessServiceManager.getExecutors(clusterId, rollupId);
+    // }
 
-    function isRollupExecutorRegistered(string calldata clusterId, string calldata rollupId, address executor) external view returns (bool) {
-        return livenessServiceManager.isRollupExecutorRegistered(clusterId, rollupId, executor);
-    }
+    // function isRollupExecutorRegistered(string calldata clusterId, string calldata rollupId, address executor) external view returns (bool) {
+    //     return livenessServiceManager.isRollupExecutorRegistered(clusterId, rollupId, executor);
+    // }
 
     // Allow contract to receive ETH
     receive() external payable {}
