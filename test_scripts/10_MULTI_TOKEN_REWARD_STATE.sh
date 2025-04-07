@@ -28,9 +28,11 @@ cast send $DEFAULT_VAULT_ADDRESS --rpc-url $RPC_URL --private-key $DEFAULT_ACCOU
 cast call $DEFAULT_VAULT_ADDRESS --rpc-url $RPC_URL \
 "activeSharesOf(address)(uint256)" $DEFAULT_ACCOUNT_ADDRESS
 
+# cast send $DEFAULT_VAULT_BURNER_ROUTER --rpc-url $RPC_URL --private-key $VAULT_OWNER_PRIVATE_KEY \
+# "setNetworkReceiver(address, address)" $NETWORK_ADDRESS $NETWORK_ADDRESS
 
 
-
+cast call $DEFAULT_VAULT_BURNER_ROUTER "networkReceiver(address)((address))" $NETWORK_ADDRESS --rpc-url $RPC_URL
 
 
 # # WBTC Token Setup
@@ -61,7 +63,11 @@ cast send $WBTC_VAULT_ADDRESS --rpc-url $RPC_URL --private-key $WBTC_ACCOUNT_PRI
 cast call $WBTC_VAULT_ADDRESS --rpc-url $RPC_URL \
 "activeSharesOf(address)(uint256)" $WBTC_ACCOUNT_ADDRESS
 
+# cast send $WBTC_VAULT_BURNER_ROUTER --rpc-url $RPC_URL --private-key $VAULT_OWNER_PRIVATE_KEY \
+# "setNetworkReceiver(address, address)" $NETWORK_ADDRESS $NETWORK_ADDRESS
 
+
+cast call $WBTC_VAULT_BURNER_ROUTER "networkReceiver(address)((address))" $NETWORK_ADDRESS --rpc-url $RPC_URL
 
 # # STETH Token Setup
 cast send $STETH_TOKEN_ADDRESS --rpc-url $RPC_URL --private-key $TOKEN_CONTRACT_OWNER_PRIVATE_KEY \
@@ -92,11 +98,10 @@ cast send $STETH_VAULT_ADDRESS --rpc-url $RPC_URL --private-key $STETH_ACCOUNT_P
 cast call $STETH_VAULT_ADDRESS --rpc-url $RPC_URL \
 "activeSharesOf(address)(uint256)" $STETH_ACCOUNT_ADDRESS
 
+# cast send $STETH_VAULT_BURNER_ROUTER --rpc-url $RPC_URL --private-key $VAULT_OWNER_PRIVATE_KEY \
+# "setNetworkReceiver(address, address)" $NETWORK_ADDRESS $NETWORK_ADDRESS
 
-
-
-
-
+cast call $STETH_VAULT_BURNER_ROUTER "networkReceiver(address)((address))" $NETWORK_ADDRESS --rpc-url $RPC_URL
 
 # Register Operators
 cast send $OPERATOR_REGISTRY_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY \
@@ -254,16 +259,17 @@ cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --priv
 cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "registerOperator(address operatorAddress, address operatingAddress)" $STETH_OPERATOR_ADDRESS_SECONDARY $STETH_OPERATOR_ADDRESS_SECONDARY
 
+
 # Register Vaults with Validation Service Manager
 
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
+"registerVault(address vault, address stakerRewards, address operatorRewards, address slasher)" $WBTC_VAULT_ADDRESS $WBTC_STAKER_REWARDS $WBTC_OPERATOR_REWARDS $WBTC_VAULT_SLASHER
 
 cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"registerVault(address vault, address stakerRewards, address operatorRewards)" $WBTC_VAULT_ADDRESS $WBTC_STAKER_REWARDS $WBTC_OPERATOR_REWARDS
-cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"registerVault(address vault, address stakerRewards, address operatorRewards)" $DEFAULT_VAULT_ADDRESS $DEFAULT_STAKER_REWARDS $DEFAULT_OPERATOR_REWARDS
+"registerVault(address vault, address stakerRewards, address operatorRewards, address slasher)" $DEFAULT_VAULT_ADDRESS $DEFAULT_STAKER_REWARDS $DEFAULT_OPERATOR_REWARDS $DEFAULT_VAULT_SLASHER
 
 cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"registerVault(address vault, address stakerRewards, address operatorRewards)" $STETH_VAULT_ADDRESS $STETH_STAKER_REWARDS $STETH_OPERATOR_REWARDS
+"registerVault(address vault, address stakerRewards, address operatorRewards, address slasher)" $STETH_VAULT_ADDRESS $STETH_STAKER_REWARDS $STETH_OPERATOR_REWARDS $STETH_VAULT_SLASHER
 
 # Register Operators with Validation Service Manager
 cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \

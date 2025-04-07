@@ -322,8 +322,8 @@ cast send $DEFAULT_OPERATOR_REWARDS "claimRewards(address,address,address,uint25
 $DEFAULT_OPERATOR_ADDRESS \
 $NETWORK_ADDRESS \
 $DEFAULT_TOKEN_ADDRESS \
-118917785234899328 \
-"[0xd09e30fec815ef055a18bd70102a10958215de8c0c53c0d00a9a21dfdc8ddd5c]" \
+2381552831290134241 \
+"[0x3cf1315bbf4edffb404380fbff17c068fa633c5bb09fd97bf33c5f4eea2bdd9f]" \
 --rpc-url $RPC_URL \
 --private-key $DEFAULT_OPERATOR_PRIVATE_KEY
 
@@ -333,7 +333,7 @@ cast send $WBTC_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,b
 $WBTC_OPERATOR_ADDRESS \
 $NETWORK_ADDRESS \
 $DEFAULT_TOKEN_ADDRESS \
-15518577009392402912 \
+969911063087025182 \
 "[0x2e0b2da4f7c51f422022e1adf040d0a5c87c5e92563406d3ada0922ce819c094]" \
 --rpc-url $RPC_URL \
 --private-key $WBTC_OPERATOR_PRIVATE_KEY
@@ -354,8 +354,8 @@ cast send $WBTC_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,b
 $WBTC_OPERATOR_ADDRESS \
 $NETWORK_ADDRESS \
 $DEFAULT_TOKEN_ADDRESS \
-46418543521118345 \
-"[0xfe9315d1a049db3066e0f6deff366dc0a473838e7955e64806a051c35cbc1471]" \
+114010507880910643 \
+"[0xb3f27057722ab961b8f43a063b1a70c073436adb8dbbf0954634969f858222da]" \
 --rpc-url $RPC_URL \
 --private-key $WBTC_OPERATOR_PRIVATE_KEY
 
@@ -532,3 +532,112 @@ cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
 
 
 cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "createNewTask(string,string,uint256,bytes32,address[],bytes32[],uint256[],uint256[])" $CLUSTER_ID $ROLLUP_ID 12 0x287b58b93ed6c17ace087bb87f611bf21102c0602b0956736b6e523fb41c328d [] [] [] [] --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY
+
+checkIncludingOperatingAddress(address currentOperating)
+
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
+"checkIncludingOperatingAddress(address currentOperating)(bool)" $DEFAULT_OPERATOR_ADDRESS 
+
+
+Vaults (6): 0xa26a3edfa517093cCc82f11919f12e729c30A41f 0x04f107dc9b52beA893824acdf2D49A36F2Bea989 0x4ce789c1774c852FA9E248E8EcE4E4e936E92E73 0x13801edbd896ac53797fa5ef2ea8a5dc7065cf88 0x0c19a92de474cbe0f7a475395b5cd3829d502a71 0x8671451e28cf475bbd30e996fac49256d23b6809...
+Merkle Roots (3): 0x13801edbd896ac53797fa5ef2ea8a5dc7065cf88225fdd0b0110eec63c407322 0x0c19a92de474cbe0f7a475395b5cd3829d502a718317d4580a3d59aeca0abc01 0x8671451e28cf475bbd30e996fac49256d23b68095288a87627d5c8acf1127440...
+Staker Rewards (6): 5313914583743357 5 313 15 146073607557567407 1...
+Operator Rewards (6): 408 17 346762448336941544 3 467 17...
+Comparing response data with contract data...
+Vault array lengths don't match (response: 3, contract: 6)
+Data does not match. Skipping task response.
+Cycle complete at 2025년 3월 11일 화요일 11시 03분 06초 KST. Waiting for next cycle...
+^C⏎
+…tta@Martins-MacBook-Pro ~/R/s/test_scripts (feat/InitialRewardSystem) [SIGINT]  cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS \
+                                                                                           "getDistributionData(string,string,uint256)(address[],bytes32[],uint256[],uint256[])" \
+                                                                                           "$CLUSTER_ID" "$ROLLUP_ID" 2 \
+                                                                                           --rpc-url $RPC_URL
+[0xa26a3edfa517093cCc82f11919f12e729c30A41f, 0x04f107dc9b52beA893824acdf2D49A36F2Bea989, 0x4ce789c1774c852FA9E248E8EcE4E4e936E92E73]
+[0x13801edbd896ac53797fa5ef2ea8a5dc7065cf88225fdd0b0110eec63c407322, 0x0c19a92de474cbe0f7a475395b5cd3829d502a718317d4580a3d59aeca0abc01, 0x8671451e28cf475bbd30e996fac49256d23b68095288a87627d5c8acf1127440]
+[5313914583743357 [5.313e15], 146073607557567407 [1.46e17], 148612477858689234 [1.486e17]]
+[12399134028734500 [1.239e16], 340838417634323950 [3.408e17], 346762448336941544 [3.467e17]]
+
+
+
+
+ cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS \
+  --rpc-url $RPC_URL \
+  --private-key $NETWORK_PRIVATE_KEY \
+  "slashOperator(address,address,uint256,uint48)" \
+  $DEFAULT_VAULT_ADDRESS \
+  $DEFAULT_OPERATOR_ADDRESS \
+  10 \
+  1743043618
+
+
+
+
+ cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS \
+  --rpc-url $RPC_URL \
+  --private-key $NETWORK_PRIVATE_KEY \
+  "slashOperator(address,address,uint256,uint48)" \
+  $STETH_VAULT_ADDRESS \
+  $STETH_OPERATOR_ADDRESS \
+  10 \
+  1743122575
+
+cast call $DEFAULT_VAULT_SLASHER "slashRequestsLength()(uint256)" --rpc-url $RPC_URL
+
+cast call $DEFAULT_VAULT_SLASHER "slashRequests(uint256)(bytes32,address,uint256,uint48,uint48,bool)" \
+ 4 --rpc-url $RPC_URL
+
+
+
+
+cast send $DEFAULT_VAULT_SLASHER "executeSlash(uint256, bytes)(uint256)" \
+  0 0x --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY
+
+
+
+
+  0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266000000000000000000000000
+
+cast call $DEFAULT_VAULT_ADDRESS "totalStake()(uint256)" --rpc-url $RPC_URL
+cast call $DEFAULT_VAULT_ADDRESS "activeStake()(uint256)" --rpc-url $RPC_URL
+cast call $DEFAULT_VAULT_ADDRESS "epochDuration()(uint48)" --rpc-url $RPC_URL
+
+
+cast send --rpc-url $RPC_URL \
+--private-key $NETWORK_PRIVATE_KEY \
+$DEFAULT_VAULT_SLASHER \
+"setResolver(uint96,address,bytes)" \
+0 \
+$DEFAULT_ACCOUNT_ADDRESS \
+0x
+
+
+
+
+ cast send $STETH_VAULT_BURNER_ROUTER \
+  --rpc-url $RPC_URL \
+  --private-key $NETWORK_PRIVATE_KEY \
+  "triggerTransfer(address)" \
+  $NETWORK_ADDRESS    
+
+
+
+  cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" 0xdF14d78165Ae80AB2D6E30361426672cDc4b9315 --rpc-url $RPC_URL
+
+
+cast call $STETH_COLLATERAL_ADDRESS "balanceOf(address)(uint256)" $NETWORK_ADDRESS  
+
+
+
+cast call $STETH_TOKEN_ADDRESS "balanceOf(address)(uint256)" $NETWORK_ADDRESS  
+cast call $STETH_TOKEN_ADDRESS "balanceOf(address)(uint256)" $STETH_VAULT_BURNER_ROUTER  
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $DEFAULT_OPERATONETR_ADDRESS  
+
+
+
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" 0xdF14d78165Ae80AB2D6E30361426672cDc4b9315  
+
+
+cast call $DEFAULT_COLLATERAL_ADDRESS "balanceOf(address)(uint256)" 0xdF14d78165Ae80AB2D6E30361426672cDc4b9315  
+
+cast call $WBTC_OPERATOR_REWARDS --rpc-url $RPC_URL \
+"root(address,address)(bytes32)" $NETWORK_ADDRESS $WBTC_TOKEN_ADDRESS

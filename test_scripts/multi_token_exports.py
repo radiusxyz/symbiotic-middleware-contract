@@ -14,6 +14,8 @@ liveness_service_manager = read_json_file('../latest-state/31337/liveness_servic
 rewards_core = read_json_file('../latest-state/31337/rewards_core_deployment_output.json')['addresses']
 operator_rewards = read_json_file('../latest-state/31337/operator_reward_deployment_output.json')['addresses']
 staker_rewards = read_json_file('../latest-state/31337/staker_reward_deployment_output.json')['addresses']
+burner_routers = read_json_file('../latest-state/31337/burner_router_deployment_output.json')['addresses']
+
 # simulation = read_json_file('../latest-state/31337/simulation_deployment_output.json')['addresses']
 
 # Base Configuration
@@ -72,15 +74,21 @@ print(f'set -x NETWORK_REGISTRY_CONTRACT_ADDRESS "{symbiotic_core["networkRegist
 print(f'set -x OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS "{symbiotic_core["operatorNetworkOptInService"]}"')
 print(f'set -x OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS "{symbiotic_core["operatorVaultOptInService"]}"')
 print(f'set -x VAULT_FACTORY_CONTRACT_ADDRESS "{symbiotic_core["vaultFactory"]}"')
+print(f'set -x SLASHER_FACTORY_CONTRACT_ADDRESS "{symbiotic_core["slasherFactory"]}"')
 
 # Vault Configuration for all tokens
 print('\n# Vault Configurations')
 print(f'set -x DEFAULT_VAULT_ADDRESS "{vault["defaultVault"]}"')
 print(f'set -x DEFAULT_DELEGATOR_ADDRESS "{vault["defaultDelegator"]}"')
+print(f'set -x DEFAULT_VAULT_BURNER_ROUTER "{burner_routers["defaultBurnerRouter"]}"')
+
 print(f'set -x WBTC_VAULT_ADDRESS "{vault["wBTCVault"]}"')
 print(f'set -x WBTC_DELEGATOR_ADDRESS "{vault["wBTCDelegator"]}"')
+print(f'set -x WBTC_VAULT_BURNER_ROUTER "{burner_routers["wBTCBurnerRouter"]}"')
+
 print(f'set -x STETH_VAULT_ADDRESS "{vault["stETHVault"]}"')
 print(f'set -x STETH_DELEGATOR_ADDRESS "{vault["stETHDelegator"]}"')
+print(f'set -x STETH_VAULT_BURNER_ROUTER "{burner_routers["stETHBurnerRouter"]}"')
 
 print('\n# Liveness')
 print(f'set -x LIVENESS_CONTRACT_ADDRESS "{liveness_service_manager["livenessServiceManager"]}"')
@@ -142,6 +150,11 @@ print('\n# Default Staker Rewards')
 print(f'set -x DEFAULT_STAKER_REWARDS "{staker_rewards["defaultStakerReward"]}"')
 print(f'set -x STETH_STAKER_REWARDS "{staker_rewards["stETHStakerReward"]}"')
 print(f'set -x WBTC_STAKER_REWARDS "{staker_rewards["wBTCStakerReward"]}"')
+
+print('\n# Default Slashers')
+print(f'set -x DEFAULT_VAULT_SLASHER "{vault["defaultSlasher"]}"')
+print(f'set -x STETH_VAULT_SLASHER "{vault["stETHSlasher"]}"')
+print(f'set -x WBTC_VAULT_SLASHER "{vault["wBTCSlasher"]}"')
 
 print('set -x CLUSTER_ID "radius"')
 print('set -x ROLLUP_ID "rollup_id_2"')

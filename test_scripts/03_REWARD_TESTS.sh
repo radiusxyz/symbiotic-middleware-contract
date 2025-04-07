@@ -295,7 +295,7 @@ cast send $DEFAULT_OPERATOR_REWARDS \
   []
 
 cast call $REWARDS_CORE_ADDRESS \
-"getDistributionInfo(string,string)" \
+"getDistributionInfo(string,string)(bool,uint256,address,uint256,uint256,uint256)" \
 $CLUSTER_ID $ROLLUP_ID
 
 # 2. Check if the reward pool config exists
@@ -631,17 +631,20 @@ cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $VALIDATION_SERVI
 cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $DEFAULT_OPERATOR_ADDRESS
 cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $DEFAULT_OPERATOR_ADDRESS_SECONDARY
 cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $STETH_ACCOUNT_ADDRESS
-cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $REWARDS_CORE_ADDRESS
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $REWARDS_CORE_ADDRESS --rpc-url $RPC_URL
 
 
-
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL
 
 
 cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $WBTC_OPERATOR_REWARDS --rpc-url $RPC_URL
 
-cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $WBTC_OPERATOR_REWARDS --rpc-url $RPC_URL
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $STETH_OPERATOR_REWARDS --rpc-url $RPC_URL
 
 cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $REWARDS_CORE_ADDRESS --rpc-url $RPC_URL
+
+
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $STETH_OPERATOR_ADDRESS --rpc-url $RPC_URL
 
 
 cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $WBTC_OPERATOR_ADDRESS --rpc-url $RPC_URL
@@ -649,25 +652,55 @@ cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $WBTC_OPERATOR_AD
 {"cluster_id":"radius","rollup_id":"rollup_id_2","operator":"0x70997970C51812dc3A010C7d01b50e0d17dc79C8","rewards":[{"vault":"0x8615436b4ae383b2320a8545e728db98e05e0c06","operator_rewards_contract":"0x77FeD8e41861E24c1620416F2cf6A3BEdD5f6930","tasks":[{"task_id":1,"amount":"16664682775860016","proof":["0x6cdac81b75c685710102cbfaf4fadcc8a5fe9a88de41f8f6c89ae281087aba63"],"merkle_root":"0x4058d993eb26d2129b1d79457f19853f13059b0cbbe690bd8563a5b0b447441b"},{"task_id":0,"amount":"170615034168564919","proof":["0x77f24d8a7461e81b9a188ff0e31f5f90451b04c7cbd520509fd5ae636284071e"],"merkle_root":"0x72ae3f7e8e66b0191221c9802b4970657e4461c03865931f507bc151c2d546e4"}]}]}
 
 
+curl -X POST http://localhost:3000/rewards \
+                                                                                        -H "Content-Type: application/json" \
+                                                                                        -d '{
+                                                                                        "jsonrpc": "2.0",
+                                                                                        "method": "get_rewards",
+                                                                                        "params": {
+                                                                                            "cluster_id": "'$CLUSTER_ID'",
 
+                                                                                            "rollup_id": "'$ROLLUP_ID'"
+                                                                                        },
+                                                                                        "id": 1
+                                                                                    }'
+
+cast send $DEFAULT_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
+$DEFAULT_OPERATOR_ADDRESS \
+$NETWORK_ADDRESS \
+$DEFAULT_TOKEN_ADDRESS \
+12412899948456713629 \
+"[0x3e35b75aaab323b6da66e0c51d88f76c365f9d504c1b719e62da0fbf581c5d68]" \
+--rpc-url $RPC_URL \
+--private-key $DEFAULT_OPERATOR_PRIVATE_KEY
 
 
 cast send $WBTC_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
 $WBTC_OPERATOR_ADDRESS \
 $NETWORK_ADDRESS \
 $DEFAULT_TOKEN_ADDRESS \
-52192199847055821 \
-"[0x57e27f9feb4f3ac49da79b4689c39c253b2f00c654dd6926da7e5bfbe216722d]" \
+490588489120657438 \
+"[0xbd34ecd3585f736d5716ae6ed68d4d742b468913315f4b581c82e9ca4a43cd01]" \
 --rpc-url $RPC_URL \
 --private-key $WBTC_OPERATOR_PRIVATE_KEY
+
+
+cast send $WBTC_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
+$WBTC_OPERATOR_ADDRESS_SECONDARY \
+$NETWORK_ADDRESS \
+$DEFAULT_TOKEN_ADDRESS \
+154028749919203268 \
+"[0x5dc67d56a8566cb3696fc26700343a5b714f1f8938dea0a9424701aae6862659]" \
+--rpc-url $RPC_URL \
+--private-key $WBTC_OPERATOR_PRIVATE_KEY_SECONDARY
 
 
 cast send $STETH_OPERATOR_REWARDS "claimRewards(address,address,address,uint256,bytes32[])" \
 $STETH_OPERATOR_ADDRESS \
 $NETWORK_ADDRESS \
 $DEFAULT_TOKEN_ADDRESS \
-2104363430298451076 \
-"[]" \
+6110130718954248360 \
+"[0x9c963a82744169b558eded4d27b42dfd2bb45ac7daf2028ee2831437586b58a2]" \
 --rpc-url $RPC_URL \
 --private-key $STETH_OPERATOR_PRIVATE_KEY
 
@@ -690,3 +723,8 @@ $TOKEN_CONTRACT_ADDRESS \
 "[0x4ef3866300122664d1e7ae0489890fd57600af223d41b2a70a3a7f96d95989eb]" \
 --rpc-url $RPC_URL \
 --private-key $OPERATING_PRIVATE_KEY
+
+
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "executeDistributions(string,string)" $CLUSTER_ID $ROLLUP_ID \
+  --rpc-url $RPC_URL \
+  --private-key $NETWORK_PRIVATE_KEY --gas-limit 8000000

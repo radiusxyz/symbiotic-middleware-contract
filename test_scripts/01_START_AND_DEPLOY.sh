@@ -6,13 +6,16 @@
 
 ./deploy/02_deploy-collateral.sh
 
+./deploy/02_deploy-burner-router.sh
+
+
 ./deploy/03_deploy-vault.sh
 
 ./deploy/04_deploy-operator-reward.sh
 
 ./deploy/05_deploy-staker-reward.sh
 
-./deploy/07_deploy-liveness.sh
+# ./deploy/07_deploy-liveness.sh
 
 
 ./deploy/08_deploy-rewards-core.sh

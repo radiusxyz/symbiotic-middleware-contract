@@ -57,7 +57,7 @@ format_array() {
 }
 
 # Build the formatted arrays
-task_id=$(echo "$response" | jq -r '.result.task_id')
+rewarded_task_index=$(echo "$response" | jq -r '.result.rewarded_task_index')
 vaults_formatted=$(format_array "address" "${vaults[@]}")
 merkle_roots_formatted=$(format_array "hex" "${merkle_roots[@]}")
 staker_rewards_formatted=$(format_array "number" "${staker_rewards[@]}")
@@ -69,7 +69,7 @@ echo "Executing cast send command..."
 cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS \
   "createNewTask((string,string,uint256,bytes32),(uint256,address[],bytes32[],uint256[],uint256[]))" \
   "(\"$CLUSTER_ID\",\"$ROLLUP_ID\",12,0x287b58b93ed6c17ace087bb87f611bf21102c0602b0956736b6e523fb41c328d)" \
-  "($task_id,$vaults_formatted,$merkle_roots_formatted,$staker_rewards_formatted,$operator_rewards_formatted)" \
+  "($rewarded_task_index,$vaults_formatted,$merkle_roots_formatted,$staker_rewards_formatted,$operator_rewards_formatted)" \
   --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY
 
 # Print confirmation
