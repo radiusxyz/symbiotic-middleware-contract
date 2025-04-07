@@ -1,9 +1,3 @@
-.DS_Store
-.vscode/
-lib/.DS_Store
-
-lib/*
 cache
 out
 broadcast
-latest-state/31337/*

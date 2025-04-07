@@ -7,6 +7,6 @@
 @symbiotic-collateral=lib/symbioticfi/collateral
 @symbiotic-rewards=lib/symbioticfi/rewards
 @symbioticfi/core=lib/symbioticfi/core
-@symbiotic-burners=lib/symbioticfi/burners
 
+permit2=lib/Uniswap/permit2
 forge-std/src=lib/foundry-rs/forge-std/src
