@@ -2,7 +2,6 @@
 .vscode/
 lib/.DS_Store
 
-lib/*
 cache
 out
 broadcast
