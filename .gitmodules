@@ -18,5 +18,5 @@
 	url = https://github.com/symbioticfi/rewards
 [submodule "lib/symbioticfi/burners"]
 	path = lib/symbioticfi/burners
-	url = https://github.com/symbioticfi/burners.git
+	url = https://github.com/symbioticfi/burners
 
