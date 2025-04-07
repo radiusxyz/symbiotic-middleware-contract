@@ -10,6 +10,9 @@ contract Utils is Script {
 
     string public symbioticCoreDeploymentOutput = "symbiotic_core_deployment_output";
     string public collateralDeploymentOutput = "collateral_deployment_output";
+
+    string public burnerRouterDeploymentOutput = "burner_router_deployment_output";
+
     string public vaultDeploymentOutput = "vault_deployment_output";
     string public operatorRewardDeploymentOutput = "operator_reward_deployment_output";
     string public stakerRewardDeploymentOutput = "staker_reward_deployment_output";
@@ -26,8 +29,8 @@ contract Utils is Script {
     bool public depositWhitelist = false;
     uint64 public delegatorIndex = 0; // 0: INetworkRestakeDelegator / 1: IFullRestakeDelegator
     uint64 public slasherIndex = 0; // 0: Instance? / 1: IVetoSlasher
-    uint48 public vetoDuration = 100;
-    bool public withSlasher = false;
+    uint48 public vetoDuration = 10;
+    bool public withSlasher = true;
     uint256 public depositLimit = 100000000000;
     uint48 public epochDuration = 100;
 
@@ -40,7 +43,7 @@ contract Utils is Script {
     address public rewardsManagerAddress = address(0x723a4cbDAaCEb02A830d1Bbe6f318939a304c266);
 
     // Related to middlewareDeploy
-    address public network = address(0x045D9E0E4c88735ae6c4614E077593c6b0e32c33);
+    address public network = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
     uint48 public validationServiceManagerEpochDuration = 12;
     uint48 public minSlashingWindow = validationServiceManagerEpochDuration; // we dont use this
 

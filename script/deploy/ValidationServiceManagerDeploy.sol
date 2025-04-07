@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import {Utils} from "../utils/Utils.sol";
 
 import {Script} from "forge-std/src/Script.sol";
-import {ValidationServiceManager} from "src/ValidationServiceManager.sol";
+import {ValidationServiceManager} from "src/contracts/ValidationServiceManager.sol";
 
 import {INetworkRegistry} from "@symbiotic-core/src/interfaces/INetworkRegistry.sol";
 import {IOperatorRegistry} from "@symbiotic-core/src/interfaces/IOperatorRegistry.sol";
@@ -18,6 +18,8 @@ contract ValidationServiceManagerDeploy is Script, Utils {
         string memory symbioticCoreDeploymentOutput = readOutput(symbioticCoreDeploymentOutput);
         address operatorRegistryAddress = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.operatorRegistry"));
         address vaultRegistry = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.vaultFactory"));
+        address slasherRegistry = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.slasherFactory"));
+
         address operatorNetworkOptInServiceAddress = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.operatorNetworkOptInService"));
         
         string memory operatorRewardOutput = readOutput(operatorRewardDeploymentOutput);
@@ -36,7 +38,8 @@ contract ValidationServiceManagerDeploy is Script, Utils {
             validationServiceManagerEpochDuration, 
             stakerRewardRegistry,
             operatorRewardRegistry,
-            rewardsCoreAddress
+            rewardsCoreAddress,
+            slasherRegistry
 
         );
 

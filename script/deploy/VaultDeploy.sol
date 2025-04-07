@@ -27,6 +27,11 @@ contract VaultDeploy is Script, Utils {
         address stETHCollateralAddress = convertAddress(vm.parseJson(output2, ".addresses.stETHCollateral"));
         address wBTCCollateralAddress = convertAddress(vm.parseJson(output2, ".addresses.wBTCCollateral"));
 
+        string memory output3 = readOutput(burnerRouterDeploymentOutput);
+        address defaultBurnerRouterAddress = convertAddress(vm.parseJson(output3, ".addresses.defaultBurnerRouter"));
+        address stETHBurnerRouterAddress = convertAddress(vm.parseJson(output3, ".addresses.stETHBurnerRouter"));
+        address wBTCBurnerRouterAddress = convertAddress(vm.parseJson(output3, ".addresses.wBTCBurnerRouter"));
+
         address[] memory networkLimitSetRoleHolders = new address[](1);
         networkLimitSetRoleHolders[0] = owner;
 
@@ -41,6 +46,7 @@ contract VaultDeploy is Script, Utils {
             vaultConfiguratorAddress,
             owner,
             defaultCollateralAddress,
+            defaultBurnerRouterAddress,
             networkLimitSetRoleHolders,
             operatorNetworkLimitSetRoleHolders,
             operatorNetworkSharesSetRoleHolders
@@ -51,6 +57,7 @@ contract VaultDeploy is Script, Utils {
             vaultConfiguratorAddress,
             owner,
             stETHCollateralAddress,
+            stETHBurnerRouterAddress,
             networkLimitSetRoleHolders,
             operatorNetworkLimitSetRoleHolders,
             operatorNetworkSharesSetRoleHolders
@@ -61,6 +68,7 @@ contract VaultDeploy is Script, Utils {
             vaultConfiguratorAddress,
             owner,
             wBTCCollateralAddress,
+            wBTCBurnerRouterAddress,
             networkLimitSetRoleHolders,
             operatorNetworkLimitSetRoleHolders,
             operatorNetworkSharesSetRoleHolders
@@ -93,6 +101,7 @@ contract VaultDeploy is Script, Utils {
         address vaultConfiguratorAddress,
         address owner,
         address collateralAddress,
+        address burnerRouterAddress,
         address[] memory networkLimitSetRoleHolders,
         address[] memory operatorNetworkLimitSetRoleHolders,
         address[] memory operatorNetworkSharesSetRoleHolders
@@ -104,7 +113,7 @@ contract VaultDeploy is Script, Utils {
                 vaultParams: abi.encode(
                     IVault.InitParams({
                         collateral: collateralAddress,
-                        burner: address(0xdEaD),
+                        burner: burnerRouterAddress,
                         epochDuration: epochDuration,
                         depositWhitelist: depositWhitelist,
                         isDepositLimit: depositLimit != 0,
@@ -143,9 +152,9 @@ contract VaultDeploy is Script, Utils {
                 withSlasher: withSlasher,
                 slasherIndex: slasherIndex,
                 slasherParams: slasherIndex == 0
-                    ? new bytes(0)
+                    ? abi.encode(IBaseSlasher.BaseParams({isBurnerHook: true}))
                     : abi.encode(IVetoSlasher.InitParams({
-                        baseParams: IBaseSlasher.BaseParams({isBurnerHook: false}),
+                        baseParams: IBaseSlasher.BaseParams({isBurnerHook: true}),
                         vetoDuration: vetoDuration,
                         resolverSetEpochsDelay: 3
                     }))
