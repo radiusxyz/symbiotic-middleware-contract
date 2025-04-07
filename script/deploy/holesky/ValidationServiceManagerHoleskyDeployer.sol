@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import {Utils} from "../../utils/Utils.sol";
 
 import {Script, console2} from "forge-std/src/Script.sol";
-import {ValidationServiceManager} from "src/ValidationServiceManager.sol";
+import {ValidationServiceManager} from "src/contracts/ValidationServiceManager.sol";
 
 import {INetworkRegistry} from "@symbiotic-core/src/interfaces/INetworkRegistry.sol";
 import {IOperatorRegistry} from "@symbiotic-core/src/interfaces/IOperatorRegistry.sol";
@@ -23,6 +23,8 @@ contract ValidationServiceManagerHoleskyDeployer is Script, Utils {
         // fixed
         address operatorRegistryAddress = vm.envAddress("OPERATOR_REGISTRY_CONTRACT_ADDRESS");
         address vaultRegistry = vm.envAddress("VAULT_FACTORY_CONTRACT_ADDRESS");
+        address slasherRegistry = vm.envAddress("SLASHER_FACTORY_CONTRACT_ADDRESS");
+
         address operatorNetworkOptInServiceAddress = vm.envAddress("OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS");
 
         uint48 validationServiceManagerEpochDuration = uint48(vm.envUint("VALIDATION_SERVICE_MANAGER_EPOCH_DURATION"));
@@ -41,7 +43,8 @@ contract ValidationServiceManagerHoleskyDeployer is Script, Utils {
             validationServiceManagerEpochDuration, 
             stakerRewardAddress,
             operatorRewardAddress,
-            rewardManagerAddress
+            rewardManagerAddress,
+            slasherRegistry
         );
 
         console2.log("VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS=", address(validationServiceManager));

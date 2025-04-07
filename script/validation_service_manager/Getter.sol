@@ -5,8 +5,8 @@ import {Utils} from "../utils/Utils.sol";
 
 import {Script, console2} from "forge-std/src/Script.sol";
 
-import {ValidationServiceManager} from "src/ValidationServiceManager.sol";
-import {IValidationServiceManager} from "src/IValidationServiceManager.sol";
+import {ValidationServiceManager} from "src/contracts/ValidationServiceManager.sol";
+import {IValidationServiceManager} from "src/interfaces/IValidationServiceManager.sol";
 
 import {INetworkRegistry} from "@symbiotic-core/src/interfaces/INetworkRegistry.sol";
 import {IOperatorRegistry} from "@symbiotic-core/src/interfaces/IOperatorRegistry.sol";
