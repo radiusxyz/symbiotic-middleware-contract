@@ -5,6 +5,11 @@ import {Utils} from "../utils/Utils.sol";
 
 import {Script} from "forge-std/src/Script.sol";
 import {ValidationServiceManager} from "src/contracts/ValidationServiceManager.sol";
+import {Registry} from "src/components/Registry.sol";
+import {RewardsManager} from "src/components/RewardsManager.sol";
+import {SlashingManager} from "src/components/SlashingManager.sol";
+import {TaskManager} from "src/components/TaskManager.sol";
+import {LivenessServiceManager} from "src/components/LivenessServiceManager.sol";
 
 import {INetworkRegistry} from "@symbiotic-core/src/interfaces/INetworkRegistry.sol";
 import {IOperatorRegistry} from "@symbiotic-core/src/interfaces/IOperatorRegistry.sol";
@@ -29,20 +34,44 @@ contract ValidationServiceManagerDeploy is Script, Utils {
         address stakerRewardRegistry = convertAddress(vm.parseJson(stakerRewardOutput, ".addresses.defaultStakerRewardsFactory"));
         address operatorRewardRegistry = convertAddress(vm.parseJson(operatorRewardOutput, ".addresses.defaultOperatorRewardsFactory"));
         address rewardsCoreAddress = convertAddress( vm.parseJson(rewardsCoreOutput, ".addresses.rewardsCore"));
-       
 
-        ValidationServiceManager validationServiceManager = new ValidationServiceManager(
+        Registry registry = new Registry(
             network, 
             vaultRegistry, 
             operatorNetworkOptInServiceAddress, 
             validationServiceManagerEpochDuration, 
             stakerRewardRegistry,
             operatorRewardRegistry,
-            rewardsCoreAddress,
             slasherRegistry
-
         );
 
+         RewardsManager rewardsManager = new RewardsManager();
+    
+        SlashingManager slashingManager = new SlashingManager(network);
+        
+        TaskManager taskManager = new TaskManager();
+        
+        LivenessServiceManager livenessServiceManager = new LivenessServiceManager();
+
+       
+
+        ValidationServiceManager validationServiceManager = new ValidationServiceManager(
+            network,
+            rewardsCoreAddress,
+            address(registry),
+            address(rewardsManager),
+            address(slashingManager),
+            address(taskManager),
+            address(livenessServiceManager)
+        );
+
+        registry.transferOwnership(address(validationServiceManager));
+        rewardsManager.transferOwnership(address(validationServiceManager));
+        slashingManager.transferOwnership(address(validationServiceManager));
+        taskManager.transferOwnership(address(validationServiceManager));
+        livenessServiceManager.transferOwnership(address(validationServiceManager));
+
+        // Write deployment output
         string memory deployedContractAddresses_output = vm.serializeAddress(
             deployedContractAddresses,
             "validationServiceManager",
