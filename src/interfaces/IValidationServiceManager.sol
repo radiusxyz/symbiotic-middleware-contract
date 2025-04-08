@@ -170,6 +170,41 @@ struct SlashRequest {
     );
 
 
+    enum SlashCreditStatus {
+            Pending,
+            Processed,
+            Failed
+    }
+
+    struct SlashCredit {
+        address requester;         // Address that requested the slash
+        address tokenAddress;      // The token being slashed
+        uint256 amount;            // Amount of tokens to credit
+        uint64 slasherType;        // 0 for instant, 1 for veto
+        uint256 slashIndex;        // For veto slashers, the index of the slash request
+        SlashCreditStatus status;  // Status of this credit
+        uint256 timestamp;         // When this credit was created
+    }
+
+    event SlashCreditCreated(
+        bytes32 indexed txHash,
+        address indexed requester,
+        address indexed tokenAddress,
+        uint256 amount,
+        uint64 slasherType,
+        uint256 slashIndex
+    );
+    
+    // Event for slash credit processing
+    event SlashCreditProcessed(
+        bytes32 indexed txHash,
+        uint256 indexed creditIndex,
+        address indexed requester,
+        address tokenAddress,
+        uint256 amount
+    );
+
+
 
 }
 
