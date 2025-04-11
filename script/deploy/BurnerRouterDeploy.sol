@@ -39,7 +39,7 @@ contract BurnerRouterDeploy is Script, Utils {
         IBurnerRouter.NetworkReceiver[] memory networkReceivers = new IBurnerRouter.NetworkReceiver[](1);
         networkReceivers[0] = IBurnerRouter.NetworkReceiver({
             network: network, // Use your network address variable
-            receiver: network // Same address as network
+            receiver: validationServiceManagerAddress // Same address as network
         });
         IBurnerRouter.OperatorNetworkReceiver[] memory emptyOperatorNetworkReceivers = new IBurnerRouter.OperatorNetworkReceiver[](0);
         
