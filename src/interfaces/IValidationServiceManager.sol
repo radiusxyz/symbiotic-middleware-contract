@@ -32,6 +32,25 @@ interface IValidationServiceManager {
     error StakerRewardsNotRegistered();
     error OperatorRewardsNotRegistered();
 
+    error InvalidValidationServiceManager(); 
+    error RollupNotRegistered(); 
+    error ExecutorNotRegisteredForRollup();  
+    error NoPendingDistributions(); 
+    error DistributionAlreadyProcessed();
+    error InvalidTransactionHash();
+    error SlashRequestAlreadyExists();
+    error IncorrectSlashDepositAmount();
+    error InvalidSignature();
+    error SlashRequestNotFound();
+    error SlashRequestAlreadyProcessed();
+    error InvalidSlashResponder();
+    error EthTransferFailed();
+    error EthRefundFailed();
+    error OperatorSlashingFailed();
+    error TokenTransferFailed();
+    error SlashCreditAlreadyProcessed();
+    error SlashCreditNotFound();
+
     struct Vault {
         address tokenAddress;
         address stakerRewards;
@@ -177,6 +196,7 @@ struct SlashRequest {
     }
 
     struct SlashCredit {
+        address vault;
         address requester;         // Address that requested the slash
         address tokenAddress;      // The token being slashed
         uint256 amount;            // Amount of tokens to credit

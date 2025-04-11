@@ -33,10 +33,8 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
     address public immutable NETWORK;
     address public immutable REWARDS_CORE_ADDRESS;
     uint256 public constant SLASH_DEPOSIT_AMOUNT = 0.05 ether;
-    // uint64 private constant INSTANT_SLASHER_TYPE = 0;
-    // uint64 private constant VETO_SLASHER_TYPE = 1;
-    // uint256 private constant SLASH_BASIS_POINTS = 5; // 0.005% represented as 5 basis points
-
+    uint64 private constant INSTANT_SLASHER_TYPE = 0;
+    uint64 private constant VETO_SLASHER_TYPE = 1;
 
     mapping(bytes32 => SlashCredit[]) public slashCredits;
 
@@ -236,7 +234,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
     function addRollup(string calldata clusterId, ILivenessServiceManager.NewRollup calldata newRollup) external {
         // Add validation to ensure that validation service manager's address is correct
         require(newRollup.validationInfo.validationServiceManager == address(this), 
-                "Invalid validation service manager address");
+                "Invalid VSM");
         
         livenessServiceManager.addRollup(clusterId, newRollup, msg.sender);
     }
@@ -282,10 +280,12 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         Task calldata task,
         DistributionParams calldata distributionParams
     ) external {
-        require(registry.checkIncludingOperatingAddress(msg.sender), "Operator not registered");
-
-        // Verify that the cluster and rollup are properly registered in the liveness manager
-        // require(livenessServiceManager.isRollupAdded(task.clusterId, task.rollupId), "Rollup not registered in liveness manager");
+        if (!registry.checkIncludingOperatingAddress(msg.sender)) {
+            revert OperatorNotRegistered();
+        }
+        if (!livenessServiceManager.isRollupAdded(task.clusterId, task.rollupId)) {
+            revert RollupNotRegistered();
+        }
         
         uint256 latestTaskNumber = taskManager.getLatestTaskNumber(task.rollupId);
         taskManager.createNewTask(task, distributionParams);
@@ -301,11 +301,12 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         uint256 referenceTaskIndex,
         bool response
     ) external {
-        require(registry.checkIncludingOperatingAddress(msg.sender), "Operator not registered");
-
-        // Verify that the sender is registered as an executor for this rollup
-        // require(livenessServiceManager.isRollupExecutorRegistered(clusterId, rollupId, msg.sender), 
-        //         "Not registered as executor for this rollup");
+        if (!registry.checkIncludingOperatingAddress(msg.sender)) {
+            revert OperatorNotRegistered();
+        }
+         if (!livenessServiceManager.isRollupExecutorRegistered(clusterId, rollupId, msg.sender)) {
+            revert ExecutorNotRegisteredForRollup();
+        }
         
         taskManager.respondToTask(clusterId, rollupId, referenceTaskIndex, response);
     }
@@ -342,8 +343,9 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
                 hasPendingDistributions = true;
             }
         }
-        
-        require(hasPendingDistributions, "No pending distributions to execute");
+        if (!hasPendingDistributions) {
+            revert NoPendingDistributions();
+        }
         
         for (uint256 i = 0; i < taskCount; i++) {
             bool hasData = rewardsManager.hasDistributionData(clusterId, rollupId, i);
@@ -375,7 +377,9 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
             bool distributed
         ) = rewardsManager.getDistributionData(clusterId, rollupId, taskIndex);
         
-        require(!distributed, "Already distributed");
+         if (distributed) {
+            revert DistributionAlreadyProcessed();
+        }
         
         uint48 oneSecondAgo = uint48(block.timestamp - 5);
         uint256 vaultCount = vaultAddresses.length;
@@ -467,140 +471,14 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
             rewardsManager.getDistributionData(clusterId, rollupId, referenceTaskId);
     }
 
-    // // Slashing Methods
-    // function slashOperator(
-    //     address vault,
-    //     address operator,
-    //     uint256 amount,
-    //     uint48 captureTimestamp
-    // ) external onlyOwner {
-    //     // Get vault details individually
-    //     address tokenAddress;
-    //     address stakerRewards;
-    //     address operatorRewards;
-    //     address slasher;
-        
-    //     // Access the vault details struct from registry
-    //     (tokenAddress, stakerRewards, operatorRewards, slasher) = registry.getVaultDetails(vault);
-    //     require(slasher != address(0), "No slasher configured for vault");
-        
-    //     // Get subnetwork using registry
-    //     bytes32 subnetwork = registry.getSubnetwork(0);
-        
-    //     uint64 slasherType = IBaseSlasher(slasher).TYPE();
-        
-    //     if (slasherType == INSTANT_SLASHER_TYPE) {  
-    //         uint256 slashedAmount = ISlasher(slasher).slash(
-    //             subnetwork,
-    //             operator,
-    //             amount,
-    //             captureTimestamp,
-    //             new bytes(0)  
-    //         );
-            
-    //         emit OperatorSlashed(vault, operator, slashedAmount, false);
-    //     } else if (slasherType == VETO_SLASHER_TYPE) { 
-    //         uint256 slashIndex = IVetoSlasher(slasher).requestSlash(
-    //             subnetwork,
-    //             operator,
-    //             amount,
-    //             captureTimestamp,
-    //             new bytes(0)   
-    //         );
-            
-    //         revert UnknownSlasherType();
-    //     } else {
-    //         revert("Unknown slasher type");
-    //     }
-    // }
+    function getSlashRequestDetails(bytes32 txHash) external view returns (SlashRequest memory) {
+        return slashingManager.getSlashRequestDetails(txHash);
+    }
+    function getSlashCreditDetails(bytes32 txHash) external view returns (SlashCredit memory) {
+        return slashingManager.getSlashCredit(txHash);
+    }
 
-    // function requestSlash(
-    //     address operator,
-    //     string calldata rollupId,
-    //     uint256 blockHeight,
-    //     bytes32 txHash,
-    //     uint256 txOrder,
-    //     bytes32[] calldata preMerklePath,
-    //     bytes calldata signature   
-    // ) external payable {  
-    //     // Validate inputs
-    //     require(txHash != bytes32(0), "Transaction hash cannot be zero");
-        
-    //     // Check if request already exists in slashing manager
-    //     SlashRequest memory existingRequest = slashingManager.getSlashRequestDetails(txHash);
-    //     require(!existingRequest.exists, "Slash request for this txHash already exists");
-        
-    //     require(msg.value == SLASH_DEPOSIT_AMOUNT, "Incorrect deposit amount sent");
-
-    //     // Verify the signature matches the operator
-    //     bytes32 messageHash = keccak256(
-    //         abi.encodePacked(
-    //             rollupId,
-    //             blockHeight,
-    //             txHash,
-    //             txOrder,
-    //             preMerklePath
-    //         )
-    //     );
-    //     bytes32 ethSignedMessageHash = keccak256(
-    //         abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
-    //     );
-    //     address recoveredAddress = slashingManager.recoverSigner(ethSignedMessageHash, signature);
-    //     require(recoveredAddress == operator, "Invalid signature: signer does not match operator");
-
-    //     // Store the slash request data in slashing manager
-    //     slashingManager.storeSlashRequest(
-    //         operator,
-    //         msg.sender,
-    //         rollupId,
-    //         blockHeight,
-    //         txHash,
-    //         txOrder,
-    //         preMerklePath,
-    //         signature,
-    //         msg.value
-    //     );
-
-    //     emit SlashRequested(txHash, operator, msg.sender, rollupId, blockHeight);
-    // }
-
-    // function respondToSlash(
-    //     bytes32 txHash,
-    //     bytes32 merkleRoot,
-    //     bytes32[] calldata postMerklePath
-    // ) external {
-    //     // Get slash request details
-    //     SlashRequest memory slashRequest = slashingManager.getSlashRequestDetails(txHash);
-    //     require(slashRequest.exists, "Slash request does not exist");
-    //     require(slashRequest.status == Status.Pending, "Slash request already processed");
-
-    //     // Validate merkle proof
-    //     bool isValid = slashingManager.validateMerkleProof(txHash, merkleRoot, postMerklePath);
-        
-    //     // Update status to prevent reentrancy
-    //     slashingManager.updateSlashRequestStatus(txHash, Status.Processed);
-
-    //     if (isValid) {
-    //         // Path is valid, transfer deposit to the operator
-    //         (bool success, ) = payable(slashRequest.operator).call{value: slashRequest.depositAmount}("");
-    //         require(success, "ETH transfer to operator failed");
-    //     } else {
-    //         // Path is invalid, return deposit to the original requester
-    //         (bool success, ) = payable(slashRequest.requester).call{value: slashRequest.depositAmount}("");
-    //         require(success, "ETH transfer back to requester failed");
-    //     }
-
-    //     emit SlashResponded(txHash, slashRequest.operator, slashRequest.requester, isValid, Status.Processed);
-    // }
-
-    // function getPreMerklePath(bytes32 txHash) external view returns (bytes32[] memory) {
-    //     return slashingManager.getPreMerklePath(txHash);
-    // }
-
-    // function getSlashRequestDetails(bytes32 txHash) external view returns (SlashRequest memory) {
-    //     return slashingManager.getSlashRequestDetails(txHash);
-    // }
- // Slashing Methods
+    
     function requestSlash(
         address operator,
         string calldata rollupId,
@@ -610,16 +488,20 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         bytes32[] calldata preMerklePath,
         bytes calldata signature   
     ) external payable {  
-        // Validate inputs
-        require(txHash != bytes32(0), "Transaction hash cannot be zero");
-        
-        // Check if request already exists in slashing manager
-        SlashRequest memory existingRequest = slashingManager.getSlashRequestDetails(txHash);
-        require(!existingRequest.exists, "Slash request for this txHash already exists");
-        
-        require(msg.value == SLASH_DEPOSIT_AMOUNT, "Incorrect deposit amount sent");
 
-        // Verify the signature matches the operator
+        if (txHash == bytes32(0)) {
+            revert InvalidTransactionHash();
+        }
+        
+        SlashRequest memory existingRequest = slashingManager.getSlashRequestDetails(txHash);
+        if (existingRequest.exists) {
+            revert SlashRequestAlreadyExists();
+        }
+        
+         if (msg.value != SLASH_DEPOSIT_AMOUNT) {
+            revert IncorrectSlashDepositAmount();
+        }
+
         bytes32 messageHash = keccak256(
             abi.encodePacked(
                 rollupId,
@@ -633,9 +515,10 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
             abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
         );
         address recoveredAddress = slashingManager.recoverSigner(ethSignedMessageHash, signature);
-        require(recoveredAddress == operator, "Invalid signature: signer does not match operator");
+        if (recoveredAddress != operator) {
+            revert InvalidSignature();
+        }
 
-        // Store the slash request data in slashing manager
         slashingManager.storeSlashRequest(
             operator,
             msg.sender,
@@ -653,118 +536,114 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
 
     function respondToSlash(
         bytes32 txHash,
-        bytes32 merkleRoot,
         bytes32[] calldata postMerklePath
     ) external nonReentrant {
-        // Get slash request details
         SlashRequest memory slashRequest = slashingManager.getSlashRequestDetails(txHash);
-        require(slashRequest.exists, "Slash request does not exist");
-        require(slashRequest.status == Status.Pending, "Slash request already processed");
-        
-        // Verify that the responder is the operator in the slash request
-        require(msg.sender == slashRequest.operator, "Only the operator can respond to this slash request");
+         if (!slashRequest.exists) {
+            revert SlashRequestNotFound();
+        }
 
-        // Validate merkle proof
+        if (slashRequest.status != Status.Pending) {
+            revert SlashRequestAlreadyProcessed();
+        }
+        
+        if (msg.sender != slashRequest.operator) {
+            revert InvalidSlashResponder();
+        }
+
+        uint256 taskIndex = taskManager.getTaskIndexFromBlockNumber(slashRequest.rollupId, slashRequest.blockHeight);
+        bytes32 merkleRoot = taskManager.getBlockCommitment(slashRequest.rollupId, taskIndex);
+
         bool isValid = slashingManager.validateMerkleProof(txHash, merkleRoot, postMerklePath);
         
-        // Update status to prevent reentrancy
         slashingManager.updateSlashRequestStatus(txHash, Status.Processed);
 
         if (isValid) {
-            // Path is valid, transfer deposit to the operator
             (bool success, ) = payable(slashRequest.operator).call{value: slashRequest.depositAmount}("");
-            require(success, "ETH transfer to operator failed");
+            if (!success) revert EthTransferFailed();
         } else {
-            // Path is invalid
-            // 1. Return deposit to the original requester
-            (bool success, ) = payable(slashRequest.requester).call{value: slashRequest.depositAmount}("");
-            require(success, "ETH transfer back to requester failed");
+            (bool successRefund, ) = payable(slashRequest.requester).call{value: slashRequest.depositAmount}("");
+            if (!successRefund) revert EthRefundFailed();
             
-            // 2. Handle invalid response by slashing the operator
-            _handleInvalidSlashResponse(txHash, slashRequest);
+            bool slashingSucceeded = _handleInvalidSlashResponse(txHash, slashRequest);
+            if (!slashingSucceeded) revert OperatorSlashingFailed();
         }
 
         emit SlashResponded(txHash, slashRequest.operator, slashRequest.requester, isValid, Status.Processed);
     }
     
-    // New function to handle invalid slash responses - refactored to reduce stack depth
-    function _handleInvalidSlashResponse(bytes32 txHash, SlashRequest memory slashRequest) internal {
-        // Get operator's staked tokens
+    function _handleInvalidSlashResponse(bytes32 txHash, SlashRequest memory slashRequest) internal returns (bool) {
         StakeInfo[] memory operatorStakes = registry.getCurrentOperatorAllTokenStakes(slashRequest.operator);
         
-        // First, find token with largest stake
         (address largestStakeToken, uint256 largestStakeAmount) = slashingManager.findLargestStake(operatorStakes);
         
         if (largestStakeToken == address(0) || largestStakeAmount == 0) {
-            // No stakes found, cannot slash
-            return;
+            return false;
         }
         
-        // Calculate slash amount (0.005% of staked amount)
         uint256 slashAmount = (largestStakeAmount * slashingManager.SLASH_BASIS_POINTS()) / 10000;
-        
+
         if (slashAmount == 0) {
-            // Stake too small to slash
-            return;
+            return false;
         }
         
-        // Find vault and execute slash in a separate function to reduce stack depth
-        _executeOperatorSlash(txHash, slashRequest, largestStakeToken, slashAmount);
+        return _executeOperatorSlash(txHash, slashRequest, largestStakeToken, 10);
     }
     
-    // Split function to reduce stack depth
     function _executeOperatorSlash(
-        bytes32 txHash, 
-        SlashRequest memory slashRequest, 
-        address tokenAddress, 
-        uint256 slashAmount
-    ) internal {
-        // Find vault for this token
-        address[] memory vaults = registry.getCurrentVaults();
-        address vaultForToken = address(0);
-        address slasherAddress = address(0);
-        uint64 slasherType = 0; // Default to instant
-        
-        for (uint256 i = 0; i < vaults.length; i++) {
-            (address tokenFromVault, , , address slasher) = registry.getVaultDetails(vaults[i]);
-            if (tokenFromVault == tokenAddress) {
-                vaultForToken = vaults[i];
-                slasherAddress = slasher;
-                // Determine slasher type
-                slasherType = IBaseSlasher(slasher).TYPE();
-                break;
-            }
-        }
-        
-        if (vaultForToken == address(0)) {
-            // No vault found for this token
-            return;
-        }
-        
-        uint256 slashIndex = 0;
-        uint48 captureTimestamp = uint48(block.timestamp - 5); // Capture timestamp slightly in the past
-        
-        // Execute the slash based on slasher type
-        bytes32 subnetwork = registry.getSubnetwork(0);
-        
-        if (slasherType == 0) { // INSTANT_SLASHER_TYPE
-            _executeInstantSlash(txHash, slashRequest, tokenAddress, slashAmount, slasherAddress, subnetwork, captureTimestamp);
-        } else if (slasherType == 1) { // VETO_SLASHER_TYPE
-            _executeVetoSlash(txHash, slashRequest, tokenAddress, slashAmount, slasherAddress, subnetwork, captureTimestamp);
+    bytes32 txHash, 
+    SlashRequest memory slashRequest, 
+    address tokenAddress, 
+    uint256 slashAmount
+) internal returns (bool) {
+    address[] memory vaults = registry.getCurrentVaults();
+    address vaultForToken = address(0);
+    address slasherAddress = address(0);
+    uint64 slasherType = 0;  
+    
+    for (uint256 i = 0; i < vaults.length; i++) {
+        (address tokenFromVault, , , address slasher) = registry.getVaultDetails(vaults[i]);
+        if (tokenFromVault == tokenAddress) {
+            vaultForToken = vaults[i];
+            slasherAddress = slasher;
+            slasherType = IBaseSlasher(slasher).TYPE();
+            break;
         }
     }
     
-    // Further split functions to handle different slash types
-    function _executeInstantSlash(
-        bytes32 txHash,
-        SlashRequest memory slashRequest,
-        address tokenAddress,
-        uint256 slashAmount,
-        address slasherAddress,
-        bytes32 subnetwork,
-        uint48 captureTimestamp
-    ) internal {
-        // For instant slasher
+    if (vaultForToken == address(0)) {
+        return false;
+    }
+    
+    uint48 captureTimestamp = uint48(block.timestamp - 5); 
+    bytes32 subnetwork = registry.getSubnetwork(0);
+    
+    return _executeSlash(
+        txHash, 
+        vaultForToken, 
+        slashRequest, 
+        tokenAddress, 
+        slashAmount, 
+        slasherAddress, 
+        subnetwork, 
+        captureTimestamp, 
+        slasherType
+    );
+}
+
+function _executeSlash(
+    bytes32 txHash,
+    address vaultForToken,
+    SlashRequest memory slashRequest,
+    address tokenAddress,
+    uint256 slashAmount,
+    address slasherAddress,
+    bytes32 subnetwork,
+    uint48 captureTimestamp,
+    uint64 slasherType
+) internal returns (bool) {
+    if (slasherType == 0) {
+        // Instant slash
         try ISlasher(slasherAddress).slash(
             subnetwork,
             slashRequest.operator,
@@ -772,30 +651,21 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
             captureTimestamp,
             new bytes(0)
         ) returns (uint256 slashedAmount) {
-            // Create a slash credit record in the SlashingManager
             slashingManager.createSlashCredit(
                 txHash,
+                vaultForToken,
                 slashRequest.requester,
                 tokenAddress,
                 slashedAmount,
-                0, // INSTANT_SLASHER_TYPE
-                0  // No slash index for instant slasher
+                0, // slasherType
+                0  // slashIndex for instant slash is always 0
             );
+            return true;
         } catch {
-            // Slashing failed
+            return false;
         }
-    }
-    
-    function _executeVetoSlash(
-        bytes32 txHash,
-        SlashRequest memory slashRequest,
-        address tokenAddress,
-        uint256 slashAmount,
-        address slasherAddress,
-        bytes32 subnetwork,
-        uint48 captureTimestamp
-    ) internal {
-        // For veto slasher
+    } else if (slasherType == 1) {
+        // Veto slash
         try IVetoSlasher(slasherAddress).requestSlash(
             subnetwork,
             slashRequest.operator,
@@ -803,83 +673,91 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
             captureTimestamp,
             new bytes(0)
         ) returns (uint256 slashIndex) {
-            // Create a slash credit record in the SlashingManager
             slashingManager.createSlashCredit(
                 txHash,
+                vaultForToken,
                 slashRequest.requester,
                 tokenAddress,
                 slashAmount,
-                1, // VETO_SLASHER_TYPE
+                1, // slasherType
                 slashIndex
             );
+            return true;
         } catch {
-            // Slashing failed
+            return false;
         }
     }
+    
+    return false;
+}
 
-    function processSlashCredit(bytes32 txHash, uint256 creditIndex) external nonReentrant {
-        SlashCredit[] memory credits = slashingManager.getSlashCredits(txHash);
-        require(creditIndex < credits.length, "Invalid credit index");
+    // function processSlashCredit(bytes32 txHash) external nonReentrant {
+    //     SlashCredit memory credit = slashingManager.getSlashCredit(txHash);
+    //     require(credit.requester != address(0), "No slash credit exists for this txHash");
+
+    //     address collateralToken = registry.getVaultToken(credit.vault);
+
+    //     try IERC20(collateralToken).transfer(credit.requester, credit.amount) {
+    //             credit.status = IValidationServiceManager.SlashCreditStatus.Processed;
+    //     } catch {
+    //             credit.status = IValidationServiceManager.SlashCreditStatus.Failed;
+    //         }
+    //     // if (credit.slasherType == 0) { // INSTANT_SLASHER_TYPE
+    //     //     slashingManager.processSlashCredit(txHash);
+    //     // } else if (credit.slasherType == 1) { // VETO_SLASHER_TYPE
+    //     //     address[] memory vaults = registry.getCurrentVaults();
+    //     //     address slasherAddress = address(0);
+            
+    //     //     for (uint256 i = 0; i < vaults.length && slasherAddress == address(0); i++) {
+    //     //         (address tokenAddress, , , address slasher) = registry.getVaultDetails(vaults[i]);
+    //     //         if (tokenAddress == credit.tokenAddress) {
+    //     //             slasherAddress = slasher;
+    //     //         }
+    //     //     }
+            
+    //     //     if (slasherAddress == address(0)) {
+    //     //         slashingManager.updateVetoSlashCreditStatus(txHash, false);
+    //     //         return;
+    //     //     }
+            
+    //     //     try IVetoSlasher(slasherAddress).slashRequests(credit.slashIndex) returns (
+    //     //         bytes32 subnetwork,
+    //     //         address operator,
+    //     //         uint256 amount,
+    //     //         uint48 captureTimestamp,
+    //     //         uint48 vetoDeadline,
+    //     //         bool completed
+    //     //     ) {
+    //     //         // Check if veto period has passed and slash is completed
+    //     //         if (completed && block.timestamp > vetoDeadline) {
+    //     //             // This is a simplification - in a real implementation you'd need to check
+    //     //             // if the slash was actually executed and not vetoed
+    //     //             slashingManager.updateVetoSlashCreditStatus(txHash, true);
+    //     //         } else {
+    //     //             slashingManager.updateVetoSlashCreditStatus(txHash, false);
+    //     //         }
+    //     //     } catch {
+    //     //         // Error accessing veto slasher, mark as failed
+    //     //         slashingManager.updateVetoSlashCreditStatus(txHash, false);
+    //     //     }
+    //     // }
+    // }
+
+    function processSlashCredit(bytes32 txHash) external nonReentrant {
+        SlashCredit memory credit = slashingManager.getSlashCredit(txHash);
+        // require(credit.requester != address(0), "No slash credit exists for this txHash");
+        // require(credit.status == IValidationServiceManager.SlashCreditStatus.Pending, "Credit already processed");
+
+        address collateralToken = registry.getVaultCollateral(credit.vault);
+        console.log("collateralToken", collateralToken);
+        bool success = IERC20(collateralToken).transfer(credit.requester, credit.amount);
+        // require(success, "Token transfer failed");
         
-        SlashCredit memory credit = credits[creditIndex];
-        if (credit.slasherType == 0) { // INSTANT_SLASHER_TYPE
-            // For instant slashers, process directly in SlashingManager
-            slashingManager.processSlashCredit(txHash, creditIndex);
-        } else if (credit.slasherType == 1) { // VETO_SLASHER_TYPE
-            // For veto slashers, we need to verify the slash was executed
-            address[] memory vaults = registry.getCurrentVaults();
-            address slasherAddress = address(0);
-            
-            for (uint256 i = 0; i < vaults.length && slasherAddress == address(0); i++) {
-                (address tokenAddress, , , address slasher) = registry.getVaultDetails(vaults[i]);
-                if (tokenAddress == credit.tokenAddress) {
-                    slasherAddress = slasher;
-                }
-            }
-            
-            if (slasherAddress == address(0)) {
-                // No vault found, mark as failed
-                slashingManager.updateVetoSlashCreditStatus(txHash, creditIndex, false);
-                return;
-            }
-            
-            // Get slash request details from the veto slasher
-            try IVetoSlasher(slasherAddress).slashRequests(credit.slashIndex) returns (
-                bytes32 subnetwork,
-                address operator,
-                uint256 amount,
-                uint48 captureTimestamp,
-                uint48 vetoDeadline,
-                bool completed
-            ) {
-                // Check if veto period has passed and slash is completed
-                if (completed && block.timestamp > vetoDeadline) {
-                    // This is a simplification - in a real implementation you'd need to check
-                    // if the slash was actually executed and not vetoed
-                    slashingManager.updateVetoSlashCreditStatus(txHash, creditIndex, true);
-                }
-            } catch {
-                // Error accessing veto slasher, mark as failed
-                slashingManager.updateVetoSlashCreditStatus(txHash, creditIndex, false);
-            }
-        }
+        // Update the status in storage, not just in memory
+        slashingManager.updateSlashCreditStatus(txHash, IValidationServiceManager.SlashCreditStatus.Processed);
+        
     }
     
-    function getPendingSlashCredits(bytes32 txHash) external view returns (uint256[] memory) {
-        return slashingManager.getPendingSlashCredits(txHash);
-    }
-    
-    function getSlashCredits(bytes32 txHash) external view returns (SlashCredit[] memory) {
-        return slashingManager.getSlashCredits(txHash);
-    }
-
-    function getPreMerklePath(bytes32 txHash) external view returns (bytes32[] memory) {
-        return slashingManager.getPreMerklePath(txHash);
-    }
-
-    function getSlashRequestDetails(bytes32 txHash) external view returns (SlashRequest memory) {
-        return slashingManager.getSlashRequestDetails(txHash);
-    }
 
    
 
