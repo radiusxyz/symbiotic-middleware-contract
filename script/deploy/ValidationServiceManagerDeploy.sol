@@ -33,7 +33,7 @@ contract ValidationServiceManagerDeploy is Script, Utils {
 
         address stakerRewardRegistry = convertAddress(vm.parseJson(stakerRewardOutput, ".addresses.defaultStakerRewardsFactory"));
         address operatorRewardRegistry = convertAddress(vm.parseJson(operatorRewardOutput, ".addresses.defaultOperatorRewardsFactory"));
-        address rewardsCoreAddress = convertAddress( vm.parseJson(rewardsCoreOutput, ".addresses.rewardsCore"));
+        address rewardsCoreAddress = convertAddress(vm.parseJson(rewardsCoreOutput, ".addresses.rewardsCore"));
 
         Registry registry = new Registry(
             network, 
@@ -44,16 +44,39 @@ contract ValidationServiceManagerDeploy is Script, Utils {
             operatorRewardRegistry,
             slasherRegistry
         );
+        vm.serializeAddress(
+            deployedContractAddresses,
+            "registry",
+            address(registry)
+        );
 
-         RewardsManager rewardsManager = new RewardsManager();
+        RewardsManager rewardsManager = new RewardsManager();
+        vm.serializeAddress(
+            deployedContractAddresses,
+            "rewardsManager",
+            address(rewardsManager)
+        );
     
         SlashingManager slashingManager = new SlashingManager(network);
+        vm.serializeAddress(
+            deployedContractAddresses,
+            "slashingManager",
+            address(slashingManager)
+        );
         
         TaskManager taskManager = new TaskManager();
+        vm.serializeAddress(
+            deployedContractAddresses,
+            "taskManager",
+            address(taskManager)
+        );
         
         LivenessServiceManager livenessServiceManager = new LivenessServiceManager();
-
-       
+        vm.serializeAddress(
+            deployedContractAddresses,
+            "livenessServiceManager",
+            address(livenessServiceManager)
+        );
 
         ValidationServiceManager validationServiceManager = new ValidationServiceManager(
             network,
