@@ -728,3 +728,6 @@ $TOKEN_CONTRACT_ADDRESS \
 cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "executeDistributions(string,string)" $CLUSTER_ID $ROLLUP_ID \
   --rpc-url $RPC_URL \
   --private-key $NETWORK_PRIVATE_KEY --gas-limit 8000000
+
+
+  cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $WBTC_OPERATOR_ADDRESS --rpc-url $RPC_URL
