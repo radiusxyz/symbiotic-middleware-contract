@@ -14,14 +14,15 @@ contract SlashingManager is Ownable, ReentrancyGuard {
     address public immutable NETWORK;
     mapping(bytes32 => IValidationServiceManager.SlashRequest) public slashRequests;
 
-    // Constants
     uint64 public constant INSTANT_SLASHER_TYPE = 0;
     uint64 public constant VETO_SLASHER_TYPE = 1;
     uint256 public constant SLASH_BASIS_POINTS = 5; // 0.005% represented as 5 basis points
 
     // Using slash credit types from IValidationServiceManager
-    // Mapping to store slash credits by txHash
-    mapping(bytes32 => IValidationServiceManager.SlashCredit[]) public slashCredits;
+    // Mapping to store slash credits by txHash (refactored to one credit per txHash)
+    mapping(bytes32 => IValidationServiceManager.SlashCredit) public slashCredits;
+    
+    bytes32[] public slashCreditTxHashes;
 
     constructor(
         address _network
@@ -53,7 +54,6 @@ contract SlashingManager is Ownable, ReentrancyGuard {
         newRequest.status = IValidationServiceManager.Status.Pending;
         newRequest.exists = true;
 
-        // Store pre-merkle-path
         for (uint i = 0; i < preMerklePath.length; i++) {
             newRequest.preMerklePath.push(preMerklePath[i]);
         }
@@ -81,7 +81,6 @@ contract SlashingManager is Ownable, ReentrancyGuard {
         bytes32 currentHash = slashRequest.txHash;
         uint256 currentIndex = slashRequest.txOrder;
 
-        // Process Pre-Merkle-Path
         for (uint i = 0; i < slashRequest.preMerklePath.length; i++) {
             bytes32 siblingHash = slashRequest.preMerklePath[i];
             if (currentIndex % 2 == 0) {
@@ -92,7 +91,6 @@ contract SlashingManager is Ownable, ReentrancyGuard {
             currentIndex = currentIndex / 2;
         }
 
-        // Process Post-Merkle-Path
         for (uint i = 0; i < postMerklePath.length; i++) {
             bytes32 siblingHash = postMerklePath[i];
             if (currentIndex % 2 == 0) {
@@ -103,7 +101,6 @@ contract SlashingManager is Ownable, ReentrancyGuard {
             currentIndex = currentIndex / 2;
         }
 
-        // Calculate validity
         bytes32 finalHash = currentHash;
         return (finalHash == merkleRoot);
     }
@@ -124,14 +121,12 @@ contract SlashingManager is Ownable, ReentrancyGuard {
         bytes32 s;
         uint8 v;
 
-        // Extract r, s, v from signature
         assembly {
             r := mload(add(signature, 32))
             s := mload(add(signature, 64))
             v := byte(0, mload(add(signature, 96)))
         }
 
-        // Adjust v value (legacy reasons)
         if (v < 27) {
             v += 27;
         }
@@ -141,16 +136,19 @@ contract SlashingManager is Ownable, ReentrancyGuard {
         return ecrecover(ethSignedMessageHash, v, r, s);
     }
 
-    // New function to create a slash credit record
     function createSlashCredit(
         bytes32 txHash,
+        address vault,
         address requester,
         address tokenAddress,
         uint256 amount,
         uint64 slasherType,
         uint256 slashIndex
     ) external onlyOwner {
+        require(slashCredits[txHash].requester == address(0), "Slash credit already exists for this txHash");
+        
         IValidationServiceManager.SlashCredit memory newCredit = IValidationServiceManager.SlashCredit({
+            vault: vault,
             requester: requester,
             tokenAddress: tokenAddress,
             amount: amount,
@@ -160,7 +158,8 @@ contract SlashingManager is Ownable, ReentrancyGuard {
             timestamp: block.timestamp
         });
         
-        slashCredits[txHash].push(newCredit);
+        slashCredits[txHash] = newCredit;
+        slashCreditTxHashes.push(txHash);
         
         emit IValidationServiceManager.SlashCreditCreated(
             txHash,
@@ -172,7 +171,6 @@ contract SlashingManager is Ownable, ReentrancyGuard {
         );
     }
     
-    // Helper function to find the token with the largest stake
     function findLargestStake(IValidationServiceManager.StakeInfo[] memory stakes) 
         external pure returns (address largestToken, uint256 largestAmount) 
     {
@@ -189,15 +187,11 @@ contract SlashingManager is Ownable, ReentrancyGuard {
         return (largestToken, largestAmount);
     }
     
-    // Function to process a single slash credit
-    function processSlashCredit(bytes32 txHash, uint256 creditIndex) external nonReentrant {
-        require(creditIndex < slashCredits[txHash].length, "Invalid credit index");
-        IValidationServiceManager.SlashCredit storage credit = slashCredits[txHash][creditIndex];
+    function processSlashCredit(bytes32 txHash) external nonReentrant {
+        IValidationServiceManager.SlashCredit storage credit = slashCredits[txHash];
         
-        // Skip already processed credits
-        if (credit.status != IValidationServiceManager.SlashCreditStatus.Pending) {
-            return;
-        }
+        require(credit.requester != address(0), "No slash credit exists for this txHash");
+        require(credit.status == IValidationServiceManager.SlashCreditStatus.Pending, "Credit not in pending state");
         
         if (credit.slasherType == INSTANT_SLASHER_TYPE) {
             // For instant slashers, transfer tokens directly
@@ -205,7 +199,7 @@ contract SlashingManager is Ownable, ReentrancyGuard {
                 credit.status = IValidationServiceManager.SlashCreditStatus.Processed;
                 emit IValidationServiceManager.SlashCreditProcessed(
                     txHash,
-                    creditIndex,
+                    0, // Since we no longer have an index, use 0
                     credit.requester,
                     credit.tokenAddress,
                     credit.amount
@@ -214,30 +208,28 @@ contract SlashingManager is Ownable, ReentrancyGuard {
                 credit.status = IValidationServiceManager.SlashCreditStatus.Failed;
             }
         } else if (credit.slasherType == VETO_SLASHER_TYPE) {
-            // For veto slashers, we can only verify completion through the external call
-            // This needs to be implemented by the caller with access to veto slasher
-            credit.status = IValidationServiceManager.SlashCreditStatus.Failed; // Default to failed until processed by caller
+            
+            credit.status = IValidationServiceManager.SlashCreditStatus.Failed;  
         }
     }
     
-    // Function to update a veto slash credit status after external verification
+   
     function updateVetoSlashCreditStatus(
         bytes32 txHash, 
-        uint256 creditIndex, 
         bool slashExecuted
     ) external onlyOwner {
-        require(creditIndex < slashCredits[txHash].length, "Invalid credit index");
-        IValidationServiceManager.SlashCredit storage credit = slashCredits[txHash][creditIndex];
+        IValidationServiceManager.SlashCredit storage credit = slashCredits[txHash];
         
+        require(credit.requester != address(0), "No slash credit exists for this txHash");
         require(credit.slasherType == VETO_SLASHER_TYPE, "Not a veto slash credit");
-        require(credit.status == IValidationServiceManager.SlashCreditStatus.Pending, "Credit not in pending state");
+        require(credit.status != IValidationServiceManager.SlashCreditStatus.Processed, "Credit not is not already processed");
         
         if (slashExecuted) {
             try IERC20(credit.tokenAddress).transfer(credit.requester, credit.amount) {
                 credit.status = IValidationServiceManager.SlashCreditStatus.Processed;
                 emit IValidationServiceManager.SlashCreditProcessed(
                     txHash,
-                    creditIndex,
+                    0,  
                     credit.requester,
                     credit.tokenAddress,
                     credit.amount
@@ -249,64 +241,51 @@ contract SlashingManager is Ownable, ReentrancyGuard {
             credit.status = IValidationServiceManager.SlashCreditStatus.Failed;
         }
     }
-    
-    // Function to process multiple slash credits in batch
-    function processSlashCreditsBatch(bytes32 txHash, uint256[] calldata creditIndices) external nonReentrant {
-        for (uint256 i = 0; i < creditIndices.length; i++) {
-            if (creditIndices[i] < slashCredits[txHash].length) {
-                IValidationServiceManager.SlashCredit storage credit = slashCredits[txHash][creditIndices[i]];
-                
-                // Skip already processed credits
-                if (credit.status != IValidationServiceManager.SlashCreditStatus.Pending) {
-                    continue;
-                }
-                
-                if (credit.slasherType == INSTANT_SLASHER_TYPE) {
-                    try IERC20(credit.tokenAddress).transfer(credit.requester, credit.amount) {
-                        credit.status = IValidationServiceManager.SlashCreditStatus.Processed;
-                        emit IValidationServiceManager.SlashCreditProcessed(
-                            txHash,
-                            creditIndices[i],
-                            credit.requester,
-                            credit.tokenAddress,
-                            credit.amount
-                        );
-                    } catch {
-                        credit.status = IValidationServiceManager.SlashCreditStatus.Failed;
-                    }
-                }
-                // Skip veto slasher type credits as they need external verification
-            }
-        }
+
+    function updateSlashCreditStatus(
+        bytes32 txHash, 
+        IValidationServiceManager.SlashCreditStatus status
+    ) external onlyOwner {
+        IValidationServiceManager.SlashCredit storage credit = slashCredits[txHash];
+        require(credit.requester != address(0), "No slash credit exists for this txHash");
+        
+        credit.status = status;
+        
+     
     }
     
-    // Function to get all pending slash credits for a txHash
-    function getPendingSlashCredits(bytes32 txHash) external view returns (uint256[] memory) {
+
+    function getPendingSlashCredits() external view returns (bytes32[] memory) {
         uint256 pendingCount = 0;
         
         // First, count the pending credits
-        for (uint256 i = 0; i < slashCredits[txHash].length; i++) {
-            if (slashCredits[txHash][i].status == IValidationServiceManager.SlashCreditStatus.Pending) {
+        for (uint256 i = 0; i < slashCreditTxHashes.length; i++) {
+            bytes32 txHash = slashCreditTxHashes[i];
+            if (slashCredits[txHash].status == IValidationServiceManager.SlashCreditStatus.Pending) {
                 pendingCount++;
             }
         }
         
         // Then create the result array
-        uint256[] memory pendingIndices = new uint256[](pendingCount);
+        bytes32[] memory pendingTxHashes = new bytes32[](pendingCount);
         uint256 currentIndex = 0;
         
-        for (uint256 i = 0; i < slashCredits[txHash].length; i++) {
-            if (slashCredits[txHash][i].status == IValidationServiceManager.SlashCreditStatus.Pending) {
-                pendingIndices[currentIndex] = i;
+        for (uint256 i = 0; i < slashCreditTxHashes.length; i++) {
+            bytes32 txHash = slashCreditTxHashes[i];
+            if (slashCredits[txHash].status == IValidationServiceManager.SlashCreditStatus.Pending) {
+                pendingTxHashes[currentIndex] = txHash;
                 currentIndex++;
             }
         }
         
-        return pendingIndices;
+        return pendingTxHashes;
     }
     
-    // Function to get all slash credits for a txHash
-    function getSlashCredits(bytes32 txHash) external view returns (IValidationServiceManager.SlashCredit[] memory) {
+    function getSlashCredit(bytes32 txHash) external view returns (IValidationServiceManager.SlashCredit memory) {
         return slashCredits[txHash];
+    }
+    
+    function getAllSlashCreditTxHashes() external view returns (bytes32[] memory) {
+        return slashCreditTxHashes;
     }
 }
