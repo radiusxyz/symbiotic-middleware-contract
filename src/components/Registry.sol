@@ -330,6 +330,10 @@ contract Registry is Ownable {
         }
     }
 
+    function getVaultCollateral(address vault) public view returns (address) {
+        return IVault(vault).collateral();
+    }
+
     function getVaultToken(address vault) public view returns (address) {
         return getTokenAddress(IVault(vault).collateral());
     }
