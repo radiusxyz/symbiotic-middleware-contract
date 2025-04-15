@@ -59,7 +59,7 @@ interface IValidationServiceManager {
     }
 
     struct DistributionParams {
-        uint256 rewardedTaskindex;
+        uint256 pendingRewardTaskIndex;
         address[] vaultAddresses;
         bytes32[] operatorMerkleRoots;
         uint256[] totalStakerReward;
@@ -70,7 +70,7 @@ interface IValidationServiceManager {
     //     string clusterId;
     //     string rollupId;
     //     uint256 blockNumber;
-    //     bytes32 blockCommitment;
+    //     bytes32 batchCommitment;
     // }
 
     struct TransactionData {
@@ -87,7 +87,7 @@ interface IValidationServiceManager {
 
     struct OperatorInfo {
         address operator;
-        address operating;
+        address txOrderer;
         
         StakeInfo[] stakeInfos;
     }
@@ -96,7 +96,7 @@ interface IValidationServiceManager {
         string clusterId;
         string rollupId;
         uint256 blockNumber;
-        bytes32 blockCommitment;
+        bytes32 batchCommitment;
     }
 
 
@@ -135,7 +135,7 @@ struct SlashRequest {
     struct RollupTaskInfo {
         uint256 latestTaskNumber;
         
-        mapping(uint256 => bytes32) blockCommitments;
+        mapping(uint256 => bytes32) batchCommitment;
         mapping(uint256 => bytes32) taskHash; 
         mapping(address => mapping(uint256 => bool)) taskResponses;
         mapping(uint256 => uint256) taskTotalResponseCount;
@@ -149,11 +149,11 @@ struct SlashRequest {
     event RegisterVault(address vault, address stakerRewards, address operatorRewards);
     event UnregisterVault(address vault);
 
-    event RegisterOperator(address operator, address operatingAddress);
-    event UpdateOperatingAddress(address operator, address operatingAddress);
+    event RegisterOperator(address operator, address txOrderer);
+    event UpdateTxOrdererAddress(address operator, address txOrderer);
     event UnregisterOperator(address operator);    
 
-    event NewTaskCreated(string clusterId, string rollupId, uint256 referenceTaskIndex, uint256 blockNumber, bytes32 blockCommitment);
+    event NewTaskCreated(string clusterId, string rollupId, uint256 referenceTaskIndex, uint256 blockNumber, bytes32 batchCommitment);
 
     event TaskResponded(string clusterId, string rollupId, uint256 referenceTaskIndex, bool response, address responder);
 

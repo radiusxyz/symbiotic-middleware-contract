@@ -7,17 +7,17 @@ import {IValidationServiceManager} from "src/interfaces/IValidationServiceManage
 contract RewardsManager is Ownable {
     mapping(string => mapping(string => mapping(uint256 => IValidationServiceManager.DistributionData))) public distributionDataByTask;
 
-    event DistributionDataSaved(string clusterId, string rollupId, uint256 rewardedTaskindex);
+    event DistributionDataSaved(string clusterId, string rollupId, uint256 pendingRewardTaskIndex);
 
     constructor() Ownable(msg.sender) {}
 
     function storeDistributionData(
         string calldata clusterId,
         string calldata rollupId,
-        uint256 rewardedTaskindex,
+        uint256 pendingRewardTaskIndex,
         IValidationServiceManager.DistributionParams calldata distributionParams
     ) external onlyOwner {
-        IValidationServiceManager.DistributionData storage data = distributionDataByTask[clusterId][rollupId][rewardedTaskindex];
+        IValidationServiceManager.DistributionData storage data = distributionDataByTask[clusterId][rollupId][pendingRewardTaskIndex];
         
         if (data.operatorMerkleRoots.length == 0) {
             data.vaultAddresses = distributionParams.vaultAddresses;
@@ -26,7 +26,7 @@ contract RewardsManager is Ownable {
             data.totalOperatorReward = distributionParams.totalOperatorReward;
             data.distributed = false;   
             
-            emit DistributionDataSaved(clusterId, rollupId, rewardedTaskindex);
+            emit DistributionDataSaved(clusterId, rollupId, pendingRewardTaskIndex);
         }
     }
 

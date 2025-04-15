@@ -44,14 +44,26 @@ contract Registry is Ownable {
     mapping(address => IValidationServiceManager.Vault) public vaultDetails;
     mapping(address => uint256) public minimumStakingAmounts;
 
-    // Operating Registry state variables integrated directly into Registry
+    // TxOrderer Registry state variables integrated directly into Registry
     mapping(address => Checkpoints.Trace208) private operatorToIndex;
-    mapping(address => address) private operatingToOperator;
-    mapping(uint208 => address) private indexToOperating;
-    uint208 private totalOperatingCount;
-    uint208 internal constant EMPTY_OPERATING_ADDRESS_INDEX = 0;
+    mapping(address => address) private txOrdererToOperator;
+    mapping(uint208 => address) private indexToTxOrderer;
+    uint208 private totalTxOrdererCount;
+    uint208 internal constant EMPTY_TXORDERER_ADDRESS_INDEX = 0;
 
-    error DuplicateOperatingAddress();
+    error DuplicateTxOrdererAddress();
+
+    event RegisterToken(address token);
+    event SetMinimumStakeAmount(address token, uint256 minimumStakeAmount);
+    event UnregisterToken(address token);
+
+    event RegisterVault(address vault, address stakerRewards, address operatorRewards);
+    event UnregisterVault(address vault);
+
+    event RegisterOperator(address operator, address txOrdererAddress);
+    event UpdateTxOrdererAddress(address operator, address txOrdererAddress);
+    event UnregisterOperator(address operator);    
+
 
     constructor(
         address _network,
@@ -113,59 +125,59 @@ contract Registry is Ownable {
         );
     }
 
-    ///////////// Operating Registry Functions Integrated
-    function getOperatorWithOperatingAddress(address operating) public view returns (address) {
-        return operatingToOperator[operating];
+    ///////////// TxOrderer Registry Functions Integrated
+    function getOperatorWithTxOrdererAddress(address txOrderer) public view returns (address) {
+        return txOrdererToOperator[txOrderer];
     }
 
-    function getCurrentOperatingAddress(address operator) public view returns (address) {
-        uint208 operatingIndex = operatorToIndex[operator].latest();
+    function getCurrentTxOrdererAddress(address operator) public view returns (address) {
+        uint208 txOrdererIndex = operatorToIndex[operator].latest();
 
-        if (operatingIndex == EMPTY_OPERATING_ADDRESS_INDEX) {
+        if (txOrdererIndex == EMPTY_TXORDERER_ADDRESS_INDEX) {
             return address(0);
         }
 
-        return indexToOperating[operatingIndex];
+        return indexToTxOrderer[txOrdererIndex];
     }
 
-    function getOperatingAddressAt(address operator, uint48 timestamp) public view returns (address) {
-        uint208 operatingIndex = operatorToIndex[operator].upperLookup(timestamp);
+    function getTxOrdererAddressAt(address operator, uint48 timestamp) public view returns (address) {
+        uint208 txOrdererIndex = operatorToIndex[operator].upperLookup(timestamp);
 
-        if (operatingIndex == EMPTY_OPERATING_ADDRESS_INDEX) {
+        if (txOrdererIndex == EMPTY_TXORDERER_ADDRESS_INDEX) {
             return address(0);
         }
 
-        return indexToOperating[operatingIndex];
+        return indexToTxOrderer[txOrdererIndex];
     }
 
-    function _initOperatingAddress(address operator, address operating) internal {
-        if (operatingToOperator[operating] != address(0)) {
-            revert DuplicateOperatingAddress();
+    function _initTxOrdererAddress(address operator, address txOrderer) internal {
+        if (txOrdererToOperator[txOrderer] != address(0)) {
+            revert DuplicateTxOrdererAddress();
         }
 
-        uint208 newIndex = ++totalOperatingCount;
-        indexToOperating[newIndex] = operating;
+        uint208 newIndex = ++totalTxOrdererCount;
+        indexToTxOrderer[newIndex] = txOrderer;
         operatorToIndex[operator].push(Time.timestamp(), newIndex);
-        operatingToOperator[operating] = operator;
+        txOrdererToOperator[txOrderer] = operator;
     }
 
-    function _updateOperatingAddress(address operator, address newOperating) internal {
-        if (operatingToOperator[newOperating] != address(0)) {
-            revert DuplicateOperatingAddress();
+    function _updateTxOrdererAddress(address operator, address newTxOrderer) internal {
+        if (txOrdererToOperator[newTxOrderer] != address(0)) {
+            revert DuplicateTxOrdererAddress();
         }
 
-        address currentOperating = getCurrentOperatingAddress(operator);
-        uint208 operatingIndex = operatorToIndex[operator].latest();
+        address currentTxOrderer = getCurrentTxOrdererAddress(operator);
+        uint208 txOrdererIndex = operatorToIndex[operator].latest();
 
-        indexToOperating[operatingIndex] = newOperating;
+        indexToTxOrderer[txOrdererIndex] = newTxOrderer;
         
-        operatingToOperator[newOperating] = operator;
+        txOrdererToOperator[newTxOrderer] = operator;
 
-        delete operatingToOperator[currentOperating];
+        delete txOrdererToOperator[currentTxOrderer];
     }
 
     ///////////// Operator management
-    function registerOperator(address operator, address operating) external onlyOwner {
+    function registerOperator(address operator, address txOrderer) external onlyOwner {
         if (operators.contains(operator)) {
             revert IValidationServiceManager.OperatorAlreadyRegistered();
         }
@@ -174,13 +186,13 @@ contract Registry is Ownable {
             revert IValidationServiceManager.OperatorNotOptedIn();
         }
 
-        // Initialize both the operator registry and operating registry
-        _initOperatingAddress(operator, operating);
+        // Initialize both the operator registry and txOrderer registry
+        _initTxOrdererAddress(operator, txOrderer);
 
         operators.add(operator);
         operators.enable(operator);
 
-        emit IValidationServiceManager.RegisterOperator(operator, operating);
+        emit RegisterOperator(operator, txOrderer);
     }
 
     function pauseOperator(address operator) external onlyOwner {
@@ -200,23 +212,23 @@ contract Registry is Ownable {
 
         operators.remove(operator);
         
-        // Update the operating address mapping to clear it
-        address operating = getCurrentOperatingAddress(operator);
-        if (operating != address(0)) {
-            delete operatingToOperator[operating];
+        // Update the txOrderer address mapping to clear it
+        address txOrderer = getCurrentTxOrdererAddress(operator);
+        if (txOrderer != address(0)) {
+            delete txOrdererToOperator[txOrderer];
         }
         
-        emit IValidationServiceManager.UnregisterOperator(operator);
+        emit UnregisterOperator(operator);
     }
 
-    function updateOperatingAddress(address operator, address operating) external onlyOwner {
+    function updateTxOrdererAddress(address operator, address txOrderer) external onlyOwner {
         if (!operators.contains(operator)) {
             revert IValidationServiceManager.OperatorNotRegistered();
         }
 
-        _updateOperatingAddress(operator, operating);
+        _updateTxOrdererAddress(operator, txOrderer);
 
-        emit IValidationServiceManager.UpdateOperatingAddress(operator, operating);
+        emit UpdateTxOrdererAddress(operator, txOrderer);
     }
 
     function getCurrentOperatorInfos() public view returns (IValidationServiceManager.OperatorInfo[] memory operatorInfos) {
@@ -236,11 +248,11 @@ contract Registry is Ownable {
 
             if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) continue;
 
-            address operating = getOperatingAddressAt(operator, epochStartTs);
+            address txOrderer = getTxOrdererAddressAt(operator, epochStartTs);
 
             IValidationServiceManager.StakeInfo[] memory tokenStakes = getOperatorAllTokenStakes(operator, epochStartTs);
 
-            operatorInfos[operatorIndex++] = IValidationServiceManager.OperatorInfo(operator, operating, tokenStakes);
+            operatorInfos[operatorIndex++] = IValidationServiceManager.OperatorInfo(operator, txOrderer, tokenStakes);
         }
 
         assembly ("memory-safe") {
@@ -257,13 +269,13 @@ contract Registry is Ownable {
         tokens.add(token);
         tokens.enable(token);
 
-        emit IValidationServiceManager.RegisterToken(token);
+        emit RegisterToken(token);
     }
 
     function setMinimumStakingAmount(address token, uint256 amount) external onlyOwner {
         minimumStakingAmounts[token] = amount;
 
-        emit IValidationServiceManager.SetMinimumStakeAmount(token, amount);
+        emit SetMinimumStakeAmount(token, amount);
     }
 
     function pauseToken(address token) external onlyOwner {
@@ -283,7 +295,7 @@ contract Registry is Ownable {
 
         tokens.remove(token);
 
-        emit IValidationServiceManager.UnregisterToken(token);
+        emit UnregisterToken(token);
     }
 
     function isActiveToken(address token) public view returns (bool) {
@@ -374,7 +386,7 @@ contract Registry is Ownable {
             slasher: slasher
         });
 
-        emit IValidationServiceManager.RegisterVault(vault, stakerRewards, operatorRewards);
+        emit RegisterVault(vault, stakerRewards, operatorRewards);
     }
 
     function pauseVault(address vault) external onlyOwner {
@@ -395,7 +407,7 @@ contract Registry is Ownable {
         vaults.remove(vault);
         delete vaultDetails[vault];
 
-        emit IValidationServiceManager.UnregisterVault(vault);
+        emit UnregisterVault(vault);
     }
 
     function isActiveVault(address vault) public view returns (bool) {
@@ -626,8 +638,8 @@ contract Registry is Ownable {
         totalStakeCached[epoch] = true;
     }
 
-    function checkIncludingOperatingAddress(address currentOperating) public view returns (bool) {
-        address currentOperator = getOperatorWithOperatingAddress(currentOperating);
+    function checkIncludingTxOrdererAddress(address currentTxOrderer) public view returns (bool) {
+        address currentOperator = getOperatorWithTxOrdererAddress(currentTxOrderer);
         if (currentOperator == address(0) || !operators.contains(currentOperator)) {
             revert IValidationServiceManager.OperatorNotRegistered();
         }

@@ -11,7 +11,7 @@ contract TaskManager is Ownable {
     uint256 public lastEmitTime;
     uint256 public constant EMIT_DELAY = 1; // 1 second
     
-    event NewTaskCreated(string clusterId, string rollupId, uint256 referenceTaskIndex, uint256 blockNumber, bytes32 blockCommitment);
+    event NewTaskCreated(string clusterId, string rollupId, uint256 referenceTaskIndex, uint256 blockNumber, bytes32 batchCommitment);
     event TaskResponded(string clusterId, string rollupId, uint256 referenceTaskIndex, bool response, address responder);
     event TaskThresholdMet(string clusterId, string rollupId, uint256 referenceTaskIndex);
 
@@ -23,39 +23,40 @@ contract TaskManager is Ownable {
     ) external {
         uint256 latestTaskNumber = rollupTaskInfos[task.rollupId].latestTaskNumber;
         rollupTaskInfos[task.rollupId].latestTaskNumber = latestTaskNumber + 1;
-        rollupTaskInfos[task.rollupId].blockCommitments[latestTaskNumber] = task.blockCommitment;
+        rollupTaskInfos[task.rollupId].batchCommitment[latestTaskNumber] = task.batchCommitment;
         blockNumberToTaskNumber[task.rollupId][task.blockNumber] = latestTaskNumber;
 
         bytes32 taskHash = keccak256(abi.encode(task));
         rollupTaskInfos[task.rollupId].taskHash[latestTaskNumber] = taskHash;
 
-        emit NewTaskCreated(task.clusterId, task.rollupId, latestTaskNumber, task.blockNumber, task.blockCommitment);
+        emit NewTaskCreated(task.clusterId, task.rollupId, latestTaskNumber, task.blockNumber, task.batchCommitment);
     }
 
     function respondToTask(
         string calldata clusterId,
         string calldata rollupId,
         uint256 referenceTaskIndex,
-        bool response
+        bool response,
+        address operator
     ) external {
         require(
-            rollupTaskInfos[rollupId].taskResponses[msg.sender][referenceTaskIndex] == false,
+            rollupTaskInfos[rollupId].taskResponses[operator][referenceTaskIndex] == false,
             "Operator has already responded to the task"
         );
 
-        rollupTaskInfos[rollupId].taskResponses[msg.sender][referenceTaskIndex] = response;
+        rollupTaskInfos[rollupId].taskResponses[operator][referenceTaskIndex] = response;
         rollupTaskInfos[rollupId].taskTotalResponseCount[referenceTaskIndex]++;
 
-        emit TaskResponded(clusterId, rollupId, referenceTaskIndex, response, msg.sender);
+        emit TaskResponded(clusterId, rollupId, referenceTaskIndex, response, operator);
                 
-        if (rollupTaskInfos[rollupId].taskTotalResponseCount[referenceTaskIndex] == 5) {
-            require(
-                block.timestamp >= lastEmitTime + EMIT_DELAY,
-                "Must wait for delay period"
-            );
-            lastEmitTime = block.timestamp;
-            emit TaskThresholdMet(clusterId, rollupId, referenceTaskIndex);
-        }
+        // if (rollupTaskInfos[rollupId].taskTotalResponseCount[referenceTaskIndex] == 5) {
+        //     require(
+        //         block.timestamp >= lastEmitTime + EMIT_DELAY,
+        //         "Must wait for delay period"
+        //     );
+        //     lastEmitTime = block.timestamp;
+        //     emit TaskThresholdMet(clusterId, rollupId, referenceTaskIndex);
+        // }
     }
 
     function getTaskHash(string calldata rollupId, uint256 taskIndex) external view returns (bytes32) {
@@ -66,8 +67,8 @@ contract TaskManager is Ownable {
         return rollupTaskInfos[rollupId].taskTotalResponseCount[taskIndex];
     }
 
-    function getBlockCommitment(string calldata rollupId, uint256 taskIndex) external view returns (bytes32) {
-        return rollupTaskInfos[rollupId].blockCommitments[taskIndex];
+    function getBatchCommitment(string calldata rollupId, uint256 taskIndex) external view returns (bytes32) {
+        return rollupTaskInfos[rollupId].batchCommitment[taskIndex];
     }
 
     function hasOperatorResponded(string calldata rollupId, uint256 taskIndex, address operator) external view returns (bool) {

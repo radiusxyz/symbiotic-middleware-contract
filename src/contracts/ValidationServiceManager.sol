@@ -74,12 +74,12 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         registry.setSubnetworkCount(_subnetworkCount);
     }
 
-    function getSubnetwork(uint96 index) external view returns (bytes32) {
-        return registry.getSubnetwork(index);
-    }
+    // function getSubnetwork(uint96 index) external view returns (bytes32) {
+    //     return registry.getSubnetwork(index);
+    // }
 
-    function registerOperator(address operator, address operating) external onlyOwner {
-        registry.registerOperator(operator, operating);
+    function registerOperator(address operator, address txOrderer) external onlyOwner {
+        registry.registerOperator(operator, txOrderer);
     }
 
     function pauseOperator(address operator) external onlyOwner {
@@ -94,17 +94,17 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         registry.unregisterOperator(operator);
     }
 
-    function updateOperatingAddress(address operator, address operating) external onlyOwner {
-        registry.updateOperatingAddress(operator, operating);
+    function updateTxOrdererAddress(address operator, address txOrderer) external onlyOwner {
+        registry.updateTxOrdererAddress(operator, txOrderer);
     }
 
-    function getCurrentOperatorInfos() public view returns (OperatorInfo[] memory) {
-        return registry.getCurrentOperatorInfos();
-    }
+    // function getCurrentOperatorInfos() public view returns (OperatorInfo[] memory) {
+    //     return registry.getCurrentOperatorInfos();
+    // }
 
-    function getOperatorInfos(uint48 epoch) public view returns (OperatorInfo[] memory) {
-        return registry.getOperatorInfos(epoch);
-    }
+    // function getOperatorInfos(uint48 epoch) public view returns (OperatorInfo[] memory) {
+    //     return registry.getOperatorInfos(epoch);
+    // }
 
     function registerToken(address token) external onlyOwner {
         registry.registerToken(token);
@@ -126,25 +126,25 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         registry.unregisterToken(token);
     }
 
-    function isActiveToken(address token) public view returns (bool) {
-        return registry.isActiveToken(token);
-    }
+    // function isActiveToken(address token) public view returns (bool) {
+    //     return registry.isActiveToken(token);
+    // }
 
-    function getCurrentTokens() public view returns (address[] memory) {
-        return registry.getCurrentTokens();
-    }
+    // function getCurrentTokens() public view returns (address[] memory) {
+    //     return registry.getCurrentTokens();
+    // }
 
-    function getTokens(uint48 epoch) public view returns (address[] memory) {
-        return registry.getTokens(epoch);
-    }
+    // function getTokens(uint48 epoch) public view returns (address[] memory) {
+    //     return registry.getTokens(epoch);
+    // }
 
-    function getTokenAddress(address collateralOrToken) public view returns (address) {
-        return registry.getTokenAddress(collateralOrToken);
-    }
+    // function getTokenAddress(address collateralOrToken) public view returns (address) {
+    //     return registry.getTokenAddress(collateralOrToken);
+    // }
 
-    function getVaultToken(address vault) public view returns (address) {
-        return registry.getVaultToken(vault);
-    }
+    // function getVaultToken(address vault) public view returns (address) {
+    //     return registry.getVaultToken(vault);
+    // }
 
     function registerVault(address vault, address stakerRewards, address operatorRewards, address slasher) external onlyOwner {
         registry.registerVault(vault, stakerRewards, operatorRewards, slasher);
@@ -162,49 +162,49 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         registry.unregisterVault(vault);
     }
 
-    function isActiveVault(address vault) public view returns (bool) {
-        return registry.isActiveVault(vault);
-    }
+    // function isActiveVault(address vault) public view returns (bool) {
+    //     return registry.isActiveVault(vault);
+    // }
 
-    function getCurrentVaults() public view returns (address[] memory) {
-        return registry.getCurrentVaults();
-    }
+    // function getCurrentVaults() public view returns (address[] memory) {
+    //     return registry.getCurrentVaults();
+    // }
 
-    function getVaults(uint48 epoch) public view returns (address[] memory) {
-        return registry.getVaults(epoch);
-    }
+    // function getVaults(uint48 epoch) public view returns (address[] memory) {
+    //     return registry.getVaults(epoch);
+    // }
 
-    function getCurrentTokenTotalStake(address token) public view returns (uint256) {
-        return registry.getCurrentTokenTotalStake(token);
-    }
+    // function getCurrentTokenTotalStake(address token) public view returns (uint256) {
+    //     return registry.getCurrentTokenTotalStake(token);
+    // }
 
-    function getTokenTotalStake(address token, uint48 epoch) public view returns (uint256) {
-        return registry.getTokenTotalStake(token, epoch);
-    }
+    // function getTokenTotalStake(address token, uint48 epoch) public view returns (uint256) {
+    //     return registry.getTokenTotalStake(token, epoch);
+    // }
 
-    function getCurrentAllTokenTotalStakes() public view returns (StakeInfo[] memory) {
-        return registry.getCurrentAllTokenTotalStakes();
-    }
+    // function getCurrentAllTokenTotalStakes() public view returns (StakeInfo[] memory) {
+    //     return registry.getCurrentAllTokenTotalStakes();
+    // }
 
-    function getAllTokenTotalStakes(uint48 epoch) public view returns (StakeInfo[] memory) {
-        return registry.getAllTokenTotalStakes(epoch);
-    }
+    // function getAllTokenTotalStakes(uint48 epoch) public view returns (StakeInfo[] memory) {
+    //     return registry.getAllTokenTotalStakes(epoch);
+    // }
 
-    function getCurrentOperatorTokenStake(address operator, address token) public view returns (uint256) {
-        return registry.getCurrentOperatorTokenStake(operator, token);
-    }
+    // function getCurrentOperatorTokenStake(address operator, address token) public view returns (uint256) {
+    //     return registry.getCurrentOperatorTokenStake(operator, token);
+    // }
 
-    function getOperatorTokenStake(address operator, address token, uint48 epoch) public view returns (uint256) {
-        return registry.getOperatorTokenStake(operator, token, epoch);
-    }
+    // function getOperatorTokenStake(address operator, address token, uint48 epoch) public view returns (uint256) {
+    //     return registry.getOperatorTokenStake(operator, token, epoch);
+    // }
 
-    function getCurrentOperatorAllTokenStakes(address operator) public view returns (StakeInfo[] memory) {
-        return registry.getCurrentOperatorAllTokenStakes(operator);
-    }
+    // function getCurrentOperatorAllTokenStakes(address operator) public view returns (StakeInfo[] memory) {
+    //     return registry.getCurrentOperatorAllTokenStakes(operator);
+    // }
 
-    function getOperatorAllTokenStakes(address operator, uint48 epoch) public view returns (StakeInfo[] memory) {
-        return registry.getOperatorAllTokenStakes(operator, epoch);
-    }
+    // function getOperatorAllTokenStakes(address operator, uint48 epoch) public view returns (StakeInfo[] memory) {
+    //     return registry.getOperatorAllTokenStakes(operator, epoch);
+    // }
 
     function calcAndCacheStakes(uint48 epoch) external {
         registry.calcAndCacheStakes(epoch);
@@ -215,21 +215,21 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         livenessServiceManager.initializeCluster(clusterId, maxTxOrdererNumber, msg.sender);
     }
 
-    function getAllClusterIds() external view returns (string[] memory) {
-        return livenessServiceManager.getAllClusterIds();
-    }
+    // function getAllClusterIds() external view returns (string[] memory) {
+    //     return livenessServiceManager.getAllClusterIds();
+    // }
 
-    function getMaxTxOrdererNumber(string calldata clusterId) external view returns (uint256) {
-        return livenessServiceManager.getMaxTxOrdererNumber(clusterId);
-    }
+    // function getMaxTxOrdererNumber(string calldata clusterId) external view returns (uint256) {
+    //     return livenessServiceManager.getMaxTxOrdererNumber(clusterId);
+    // }
 
-    function getClusterIdsByOwner(address owner) external view returns (string[] memory) {
-        return livenessServiceManager.getClusterIdsByOwner(owner);
-    }
+    // function getClusterIdsByOwner(address owner) external view returns (string[] memory) {
+    //     return livenessServiceManager.getClusterIdsByOwner(owner);
+    // }
 
-    function getClusterIdsByTxOrderer(address txOrderer) external view returns (string[] memory) {
-        return livenessServiceManager.getClusterIdsByTxOrderer(txOrderer);
-    }
+    // function getClusterIdsByTxOrderer(address txOrderer) external view returns (string[] memory) {
+    //     return livenessServiceManager.getClusterIdsByTxOrderer(txOrderer);
+    // }
 
     function addRollup(string calldata clusterId, ILivenessServiceManager.NewRollup calldata newRollup) external {
         // Add validation to ensure that validation service manager's address is correct
@@ -239,9 +239,9 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         livenessServiceManager.addRollup(clusterId, newRollup, msg.sender);
     }
 
-    function isRollupAdded(string calldata clusterId, string calldata rollupId) external view returns (bool) {
-        return livenessServiceManager.isRollupAdded(clusterId, rollupId);
-    }
+    // function isRollupAdded(string calldata clusterId, string calldata rollupId) external view returns (bool) {
+    //     return livenessServiceManager.isRollupAdded(clusterId, rollupId);
+    // }
 
     function getRollups(string calldata clusterId) external view returns (ILivenessServiceManager.Rollup[] memory) {
         return livenessServiceManager.getRollups(clusterId);
@@ -252,6 +252,9 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
     }
 
     function registerTxOrderer(string calldata clusterId) external {
+        if (!registry.checkIncludingTxOrdererAddress(msg.sender)) {
+            revert OperatorNotRegistered();
+        }
         livenessServiceManager.registerTxOrderer(clusterId, msg.sender);
     }
 
@@ -259,39 +262,39 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         livenessServiceManager.deregisterTxOrderer(clusterId, msg.sender);
     }
 
-    function getTxOrderers(string calldata clusterId) external view returns (address[] memory) {
-        return livenessServiceManager.getTxOrderers(clusterId);
-    }
+    // function getTxOrderers(string calldata clusterId) external view returns (address[] memory) {
+    //     return livenessServiceManager.getTxOrderers(clusterId);
+    // }
 
     function registerRollupExecutor(string calldata clusterId, string calldata rollupId, address executor) external {
         livenessServiceManager.registerRollupExecutor(clusterId, rollupId, executor, msg.sender);
     }
 
-    function getExecutors(string calldata clusterId, string calldata rollupId) external view returns (address[] memory) {
-        return livenessServiceManager.getExecutors(clusterId, rollupId);
-    }
+    // function getExecutors(string calldata clusterId, string calldata rollupId) external view returns (address[] memory) {
+    //     return livenessServiceManager.getExecutors(clusterId, rollupId);
+    // }
 
-    function isRollupExecutorRegistered(string calldata clusterId, string calldata rollupId, address executor) external view returns (bool) {
-        return livenessServiceManager.isRollupExecutorRegistered(clusterId, rollupId, executor);
-    }
+    // function isRollupExecutorRegistered(string calldata clusterId, string calldata rollupId, address executor) external view returns (bool) {
+    //     return livenessServiceManager.isRollupExecutorRegistered(clusterId, rollupId, executor);
+    // }
 
     // Task Manager Methods
     function createNewTask(
         Task calldata task,
         DistributionParams calldata distributionParams
     ) external {
-        if (!registry.checkIncludingOperatingAddress(msg.sender)) {
+        if (!registry.checkIncludingTxOrdererAddress(msg.sender)) {
             revert OperatorNotRegistered();
         }
-        if (!livenessServiceManager.isRollupAdded(task.clusterId, task.rollupId)) {
-            revert RollupNotRegistered();
-        }
+        // if (!livenessServiceManager.isRollupAdded(task.clusterId, task.rollupId)) {
+        //     revert RollupNotRegistered();
+        // }
         
         uint256 latestTaskNumber = taskManager.getLatestTaskNumber(task.rollupId);
         taskManager.createNewTask(task, distributionParams);
         
         if (latestTaskNumber > 0 && distributionParams.operatorMerkleRoots.length > 0) {
-            rewardsManager.storeDistributionData(task.clusterId, task.rollupId, distributionParams.rewardedTaskindex, distributionParams);
+            rewardsManager.storeDistributionData(task.clusterId, task.rollupId, distributionParams.pendingRewardTaskIndex, distributionParams);
         }
     }
 
@@ -301,14 +304,14 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         uint256 referenceTaskIndex,
         bool response
     ) external {
-        if (!registry.checkIncludingOperatingAddress(msg.sender)) {
+        if (!registry.checkIncludingTxOrdererAddress(msg.sender)) {
             revert OperatorNotRegistered();
         }
-         if (!livenessServiceManager.isRollupExecutorRegistered(clusterId, rollupId, msg.sender)) {
-            revert ExecutorNotRegisteredForRollup();
-        }
+        //  if (!livenessServiceManager.isRollupExecutorRegistered(clusterId, rollupId, msg.sender)) {
+        //     revert ExecutorNotRegisteredForRollup();
+        // }
         
-        taskManager.respondToTask(clusterId, rollupId, referenceTaskIndex, response);
+        taskManager.respondToTask(clusterId, rollupId, referenceTaskIndex, response, msg.sender);
     }
 
     // Distribution Methods
@@ -552,7 +555,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         }
 
         uint256 taskIndex = taskManager.getTaskIndexFromBlockNumber(slashRequest.rollupId, slashRequest.blockHeight);
-        bytes32 merkleRoot = taskManager.getBlockCommitment(slashRequest.rollupId, taskIndex);
+        bytes32 merkleRoot = taskManager.getBatchCommitment(slashRequest.rollupId, taskIndex);
 
         bool isValid = slashingManager.validateMerkleProof(txHash, merkleRoot, postMerklePath);
         
