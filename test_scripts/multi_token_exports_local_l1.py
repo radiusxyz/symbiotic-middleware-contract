@@ -10,10 +10,11 @@ symbiotic_core = read_json_file('../latest-state/32382/symbiotic_core_deployment
 validation_manager = read_json_file('../latest-state/32382/validation_service_manager_deployment_output.json')['addresses']
 vault = read_json_file('../latest-state/32382/vault_deployment_output.json')['addresses']
 collateral = read_json_file('../latest-state/32382/collateral_deployment_output.json')['addresses']
-liveness_service_manager = read_json_file('../latest-state/32382/liveness_service_manager_deployment_output.json')['addresses']
+# liveness_service_manager = read_json_file('../latest-state/32382/liveness_service_manager_deployment_output.json')['addresses']
 rewards_core = read_json_file('../latest-state/32382/rewards_core_deployment_output.json')['addresses']
 operator_rewards = read_json_file('../latest-state/32382/operator_reward_deployment_output.json')['addresses']
 staker_rewards = read_json_file('../latest-state/32382/staker_reward_deployment_output.json')['addresses']
+burner_routers = read_json_file('../latest-state/32382/burner_router_deployment_output.json')['addresses']
 # simulation = read_json_file('../latest-state/32382/simulation_deployment_output.json')['addresses']
 
 # Base Configuration
@@ -86,23 +87,36 @@ print(f'set -x NETWORK_REGISTRY_CONTRACT_ADDRESS "{symbiotic_core["networkRegist
 print(f'set -x OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS "{symbiotic_core["operatorNetworkOptInService"]}"')
 print(f'set -x OPERATOR_VAULT_OPT_IN_SERVICE_CONTRACT_ADDRESS "{symbiotic_core["operatorVaultOptInService"]}"')
 print(f'set -x VAULT_FACTORY_CONTRACT_ADDRESS "{symbiotic_core["vaultFactory"]}"')
+print(f'set -x SLASHER_FACTORY_CONTRACT_ADDRESS "{symbiotic_core["slasherFactory"]}"')
 
 # Vault Configuration for all tokens
 print('\n# Vault Configurations')
 print(f'set -x DEFAULT_VAULT_ADDRESS "{vault["defaultVault"]}"')
 print(f'set -x DEFAULT_DELEGATOR_ADDRESS "{vault["defaultDelegator"]}"')
+print(f'set -x DEFAULT_VAULT_BURNER_ROUTER "{burner_routers["defaultBurnerRouter"]}"')
+
 print(f'set -x WBTC_VAULT_ADDRESS "{vault["wBTCVault"]}"')
 print(f'set -x WBTC_DELEGATOR_ADDRESS "{vault["wBTCDelegator"]}"')
+print(f'set -x WBTC_VAULT_BURNER_ROUTER "{burner_routers["wBTCBurnerRouter"]}"')
+
 print(f'set -x STETH_VAULT_ADDRESS "{vault["stETHVault"]}"')
 print(f'set -x STETH_DELEGATOR_ADDRESS "{vault["stETHDelegator"]}"')
+print(f'set -x STETH_VAULT_BURNER_ROUTER "{burner_routers["stETHBurnerRouter"]}"')
 
-print('\n# Liveness')
-print(f'set -x LIVENESS_CONTRACT_ADDRESS "{liveness_service_manager["livenessServiceManager"]}"')
+
+# print('\n# Liveness')
+# print(f'set -x LIVENESS_CONTRACT_ADDRESS "{liveness_service_manager["livenessServiceManager"]}"')
+
 
 
 
 print('\n# Rollup')
 print(f'set -x VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "{validation_manager["validationServiceManager"]}"')
+print(f'set -x VSM_REGISTRY "{validation_manager["registry"]}"')
+print(f'set -x VSM_REWARDS_MANAGER "{validation_manager["rewardsManager"]}"')
+print(f'set -x VSM_SLASHING_MANAGER "{validation_manager["slashingManager"]}"')
+print(f'set -x VSM_TASK_MANAGER "{validation_manager["taskManager"]}"')
+print(f'set -x VSM_LIVENESS_MANAGER "{validation_manager["livenessServiceManager"]}"')
 
 print('\n# Operator')
 # print('set -x OPERATOR_ADDRESS "0x045D9E0E4c88735ae6c4614E077593c6b0e32c33"')
@@ -160,6 +174,13 @@ print(f'set -x WBTC_STAKER_REWARDS "{staker_rewards["wBTCStakerReward"]}"')
 print('set -x CLUSTER_ID "radius"')
 print('set -x ROLLUP_ID "rollup_id_2"')
 print(f'set -x REWARD_TOKEN_ADDRESS "{collateral["defaultCollateral"]}"')
+
+
+print('\n# Default Slashers')
+print(f'set -x DEFAULT_VAULT_SLASHER "{vault["defaultSlasher"]}"')
+print(f'set -x STETH_VAULT_SLASHER "{vault["stETHSlasher"]}"')
+print(f'set -x WBTC_VAULT_SLASHER "{vault["wBTCSlasher"]}"')
+
 
 print('set -x REWARD_RATE 1000')
 print('set -x MIN_STAKE_REQUIRED 100')
