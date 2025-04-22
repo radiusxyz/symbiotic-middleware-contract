@@ -16,10 +16,8 @@ contract SlashingManager is Ownable, ReentrancyGuard {
 
     uint64 public constant INSTANT_SLASHER_TYPE = 0;
     uint64 public constant VETO_SLASHER_TYPE = 1;
-    uint256 public constant SLASH_BASIS_POINTS = 5; // 0.005% represented as 5 basis points
+    uint256 public constant SLASH_BASIS_POINTS = 5;  
 
-    // Using slash credit types from IValidationServiceManager
-    // Mapping to store slash credits by txHash (refactored to one credit per txHash)
     mapping(bytes32 => IValidationServiceManager.SlashCredit) public slashCredits;
     
     bytes32[] public slashCreditTxHashes;
@@ -30,91 +28,131 @@ contract SlashingManager is Ownable, ReentrancyGuard {
         NETWORK = _network;
     }
 
-    function storeSlashRequest(
-        address operator,
-        address requester,
-        string calldata rollupId,
-        uint256 blockHeight,
+    function u64LE(uint64 n) internal pure returns (bytes memory) {
+        bytes memory result = new bytes(8);
+        
+        for (uint i = 0; i < 8; i++) {
+            result[i] = bytes1(uint8(n & 0xFF));
+            n >>= 8;
+        }
+        
+        return result;
+    }
+
+    function encodeString(string memory s) internal pure returns (bytes memory) {
+        bytes memory strBytes = bytes(s);
+        
+        return abi.encodePacked(
+            u64LE(uint64(strBytes.length)),
+            strBytes
+        );
+    }
+
+    function encodeHashString(bytes32 hash) internal pure returns (bytes memory) {
+        string memory hashStr = toHexString(hash);
+        return encodeString(hashStr);
+    }
+
+    function toHexString(bytes32 value) internal pure returns (string memory) {
+        bytes memory result = new bytes(66); // 0x + 64 hex chars
+        result[0] = "0";
+        result[1] = "x";
+        
+        bytes16 symbols = "0123456789abcdef";
+        for (uint256 i = 0; i < 32; i++) {
+            uint8 b = uint8(value[i]);
+            result[2 + i * 2] = symbols[b >> 4];
+            result[3 + i * 2] = symbols[b & 0xf];
+        }
+        
+        return string(result);
+    }
+
+    function toString(uint256 value) internal pure returns (string memory) {
+        if (value == 0) {
+            return "0";
+        }
+        
+        uint256 temp = value;
+        uint256 digits;
+        
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        
+        return string(buffer);
+    }
+
+    function concatArrays(bytes32 a, bytes32 b) internal pure returns (bytes memory) {
+        return abi.encodePacked(a, b);
+    }
+
+    function hashData(bytes memory data) internal pure returns (bytes32) {
+        return keccak256(data);
+    }
+
+    function encodeOrderCommitmentData(
+        string memory rollupId,
+        uint256 batchNumber,
+        uint256 txOrder,
+        bytes32 txHash,
+        bytes32[] memory preMerklePath
+    ) internal pure returns (bytes memory) {
+        bytes memory result;
+        
+        // Rollup ID (length-prefixed string)
+        result = abi.encodePacked(result, encodeString(rollupId));
+        
+        // Batch number (u64 little-endian)
+        result = abi.encodePacked(result, u64LE(uint64(batchNumber)));
+        
+        // Transaction order (u64 little-endian)
+        result = abi.encodePacked(result, u64LE(uint64(txOrder)));
+        
+        // Transaction hash (length-prefixed string with 0x prefix)
+        result = abi.encodePacked(result, encodeHashString(txHash));
+        
+        // Pre merkle path array length (u64 little-endian)
+        result = abi.encodePacked(result, u64LE(uint64(preMerklePath.length)));
+        
+        // Pre merkle path elements (each as a length-prefixed string)
+        for (uint i = 0; i < preMerklePath.length; i++) {
+            result = abi.encodePacked(result, encodeHashString(preMerklePath[i]));
+        }
+        
+        return result;
+    }
+
+    function verifyOrderCommitmentSignature(
+        address signer,
+        string memory rollupId,
+        uint256 batchNumber,
         bytes32 txHash,
         uint256 txOrder,
-        bytes32[] calldata preMerklePath,
-        bytes calldata signature,
-        uint256 depositAmount
-    ) external onlyOwner {
-        // Store the slash request data
-        IValidationServiceManager.SlashRequest storage newRequest = slashRequests[txHash];
-        newRequest.operator = operator;
-        newRequest.requester = requester;
-        newRequest.rollupId = rollupId;
-        newRequest.blockHeight = blockHeight;
-        newRequest.txHash = txHash;
-        newRequest.txOrder = txOrder;
-        newRequest.signature = signature;
-        newRequest.depositAmount = depositAmount;
-        newRequest.status = IValidationServiceManager.Status.Pending;
-        newRequest.exists = true;
+        bytes32[] memory preMerklePath,
+        bytes memory signature
+    ) external view returns (bool) {
+        bytes memory message = encodeOrderCommitmentData(
+            rollupId,
+            batchNumber,
+            txOrder,
+            txHash,
+            preMerklePath
+        );
 
-        for (uint i = 0; i < preMerklePath.length; i++) {
-            newRequest.preMerklePath.push(preMerklePath[i]);
-        }
+        address recoveredSigner = recoverSigner(message, signature);
+        return (recoveredSigner == signer);
     }
 
-    function getPreMerklePath(bytes32 txHash) external view returns (bytes32[] memory) {
-        require(slashRequests[txHash].exists, "Slash request does not exist");
-        return slashRequests[txHash].preMerklePath;
-    }
-
-    function getSlashRequestDetails(bytes32 txHash) external view returns (IValidationServiceManager.SlashRequest memory) {
-         return slashRequests[txHash];
-    }
-
-    function validateMerkleProof(
-        bytes32 txHash,
-        bytes32 merkleRoot,
-        bytes32[] calldata postMerklePath
-    ) external view returns (bool isValid) {
-        require(slashRequests[txHash].exists, "Slash request does not exist");
-        IValidationServiceManager.SlashRequest storage slashRequest = slashRequests[txHash];
-        require(slashRequest.status == IValidationServiceManager.Status.Pending, "Slash request already processed");
-
-        // Retrieve stored data needed for calculation
-        bytes32 currentHash = slashRequest.txHash;
-        uint256 currentIndex = slashRequest.txOrder;
-
-        for (uint i = 0; i < slashRequest.preMerklePath.length; i++) {
-            bytes32 siblingHash = slashRequest.preMerklePath[i];
-            if (currentIndex % 2 == 0) {
-                currentHash = keccak256(abi.encodePacked(currentHash, siblingHash));
-            } else {
-                currentHash = keccak256(abi.encodePacked(siblingHash, currentHash));
-            }
-            currentIndex = currentIndex / 2;
-        }
-
-        for (uint i = 0; i < postMerklePath.length; i++) {
-            bytes32 siblingHash = postMerklePath[i];
-            if (currentIndex % 2 == 0) {
-                currentHash = keccak256(abi.encodePacked(currentHash, siblingHash));
-            } else {
-                currentHash = keccak256(abi.encodePacked(siblingHash, currentHash));
-            }
-            currentIndex = currentIndex / 2;
-        }
-
-        bytes32 finalHash = currentHash;
-        return (finalHash == merkleRoot);
-    }
-
-    function updateSlashRequestStatus(bytes32 txHash, IValidationServiceManager.Status status) external onlyOwner {
-        require(slashRequests[txHash].exists, "Slash request does not exist");
-        slashRequests[txHash].status = status;
-    }
-
-    function recoverSigner(bytes32 ethSignedMessageHash, bytes memory signature)
-        public
-        pure
-        returns (address)
-    {
+    function recoverSigner(bytes memory message, bytes memory signature) public pure returns (address) {
         require(signature.length == 65, "Invalid signature length");
 
         bytes32 r;
@@ -133,18 +171,113 @@ contract SlashingManager is Ownable, ReentrancyGuard {
 
         require(v == 27 || v == 28, "Invalid signature 'v' value");
 
-        return ecrecover(ethSignedMessageHash, v, r, s);
+        bytes32 messageHash = keccak256(abi.encodePacked(
+            "\x19Ethereum Signed Message:\n",
+            toString(message.length),
+            message
+        ));
+
+        return ecrecover(messageHash, v, r, s);
     }
 
-    function createSlashCredit(
-        bytes32 txHash,
-        address vault,
+    function storeSlashRequest(
+        address operator,
         address requester,
-        address tokenAddress,
-        uint256 amount,
-        uint64 slasherType,
-        uint256 slashIndex
+        string calldata clusterId,
+        string calldata rollupId,
+        uint256 batchNumber,
+        bytes32 txHash,
+        uint256 txOrder,
+        bytes32[] calldata preMerklePath,
+        bytes calldata signature,
+        uint256 depositAmount,
+        uint256 timestamp
     ) external onlyOwner {
+        IValidationServiceManager.SlashRequest storage newRequest = slashRequests[txHash];
+        newRequest.operator = operator;
+        newRequest.requester = requester;
+        newRequest.clusterId = clusterId;
+
+        newRequest.rollupId = rollupId;
+        newRequest.batchNumber = batchNumber;
+        newRequest.txHash = txHash;
+        newRequest.txOrder = txOrder;
+        newRequest.signature = signature;
+        newRequest.depositAmount = depositAmount;
+        newRequest.status = IValidationServiceManager.Status.Pending;
+        newRequest.exists = true;
+        newRequest.timestamp = timestamp;  
+
+        for (uint i = 0; i < preMerklePath.length; i++) {
+            newRequest.preMerklePath.push(preMerklePath[i]);
+        }
+    }
+
+    function getPreMerklePath(bytes32 txHash) external view returns (bytes32[] memory) {
+        require(slashRequests[txHash].exists, "Slash request does not exist");
+        return slashRequests[txHash].preMerklePath;
+    }
+
+    function getSlashRequestDetails(bytes32 txHash) external view returns (IValidationServiceManager.SlashRequest memory) {
+         return slashRequests[txHash];
+    }
+
+    function validateMerkleProof( bytes32 txHash, bytes32 merkleRoot, bytes32[] calldata postMerklePath ) external view returns (bool isValid) {
+        require(slashRequests[txHash].exists, "Slash request does not exist");
+        IValidationServiceManager.SlashRequest storage slashRequest = slashRequests[txHash];
+        require(slashRequest.status == IValidationServiceManager.Status.Pending, "Slash request already processed");
+
+        string memory txHashString = toHexString(txHash);
+        bytes32 currentHash = hashData(bytes(txHashString));
+
+        bytes32[] memory reversedPreMerklePath = new bytes32[](slashRequest.preMerklePath.length);
+        for (uint arrIndex = 0; arrIndex < slashRequest.preMerklePath.length; arrIndex++) {
+            reversedPreMerklePath[arrIndex] = slashRequest.preMerklePath[slashRequest.preMerklePath.length - 1 - arrIndex];
+        }
+        uint256 index = slashRequest.txOrder;
+        uint preMerkleIndex = 0;
+        uint postMerkleIndex = 0;
+
+        while (preMerkleIndex < reversedPreMerklePath.length || postMerkleIndex < postMerklePath.length) {
+            bytes32 sibling;
+            
+            if (index % 2 == 0) {
+                // If index is even, take from postMerklePath
+                if (postMerkleIndex >= postMerklePath.length) {
+                    return false;
+                }
+                sibling = postMerklePath[postMerkleIndex];
+                postMerkleIndex++;
+            } else {
+                // If index is odd, take from preMerklePath
+                if (preMerkleIndex >= reversedPreMerklePath.length) {
+                    return false; 
+                }
+                sibling = reversedPreMerklePath[preMerkleIndex];
+                preMerkleIndex++;
+            }
+            
+            // Compute the parent hash 
+            if (index % 2 == 0) {
+                currentHash = hashData(concatArrays(currentHash, sibling));
+            } else {
+                currentHash = hashData(concatArrays(sibling, currentHash));
+            }
+            
+            // Move up the tree
+            index /= 2;
+        }
+        
+        // Final verification
+        return currentHash == merkleRoot;
+    }
+
+    function updateSlashRequestStatus(bytes32 txHash, IValidationServiceManager.Status status) external onlyOwner {
+        require(slashRequests[txHash].exists, "Slash request does not exist");
+        slashRequests[txHash].status = status;
+    }
+
+    function createSlashCredit( bytes32 txHash, address vault, address requester, address tokenAddress, uint256 amount, uint64 slasherType, uint256 slashIndex ) external onlyOwner {
         require(slashCredits[txHash].requester == address(0), "Slash credit already exists for this txHash");
         
         IValidationServiceManager.SlashCredit memory newCredit = IValidationServiceManager.SlashCredit({
@@ -160,15 +293,7 @@ contract SlashingManager is Ownable, ReentrancyGuard {
         
         slashCredits[txHash] = newCredit;
         slashCreditTxHashes.push(txHash);
-        
-        emit IValidationServiceManager.SlashCreditCreated(
-            txHash,
-            requester,
-            tokenAddress,
-            amount,
-            slasherType,
-            slashIndex
-        );
+        emit IValidationServiceManager.SlashCreditCreated(txHash, requester, tokenAddress, amount, slasherType, slashIndex);
     }
     
     function findLargestStake(IValidationServiceManager.StakeInfo[] memory stakes) 
@@ -194,12 +319,11 @@ contract SlashingManager is Ownable, ReentrancyGuard {
         require(credit.status == IValidationServiceManager.SlashCreditStatus.Pending, "Credit not in pending state");
         
         if (credit.slasherType == INSTANT_SLASHER_TYPE) {
-            // For instant slashers, transfer tokens directly
             try IERC20(credit.tokenAddress).transfer(credit.requester, credit.amount) {
                 credit.status = IValidationServiceManager.SlashCreditStatus.Processed;
                 emit IValidationServiceManager.SlashCreditProcessed(
                     txHash,
-                    0, // Since we no longer have an index, use 0
+                    0,  
                     credit.requester,
                     credit.tokenAddress,
                     credit.amount
@@ -214,10 +338,7 @@ contract SlashingManager is Ownable, ReentrancyGuard {
     }
     
    
-    function updateVetoSlashCreditStatus(
-        bytes32 txHash, 
-        bool slashExecuted
-    ) external onlyOwner {
+    function updateVetoSlashCreditStatus( bytes32 txHash, bool slashExecuted ) external onlyOwner {
         IValidationServiceManager.SlashCredit storage credit = slashCredits[txHash];
         
         require(credit.requester != address(0), "No slash credit exists for this txHash");
@@ -242,18 +363,16 @@ contract SlashingManager is Ownable, ReentrancyGuard {
         }
     }
 
-    function updateSlashCreditStatus(
-        bytes32 txHash, 
-        IValidationServiceManager.SlashCreditStatus status
-    ) external onlyOwner {
+    function updateSlashCreditStatus( bytes32 txHash, IValidationServiceManager.SlashCreditStatus status ) external onlyOwner {
         IValidationServiceManager.SlashCredit storage credit = slashCredits[txHash];
         require(credit.requester != address(0), "No slash credit exists for this txHash");
         
         credit.status = status;
-        
-     
     }
     
+    function getSlashCredit(bytes32 txHash) external view returns (IValidationServiceManager.SlashCredit memory) {
+        return slashCredits[txHash];
+    }
 
     function getPendingSlashCredits() external view returns (bytes32[] memory) {
         uint256 pendingCount = 0;
@@ -279,10 +398,6 @@ contract SlashingManager is Ownable, ReentrancyGuard {
         }
         
         return pendingTxHashes;
-    }
-    
-    function getSlashCredit(bytes32 txHash) external view returns (IValidationServiceManager.SlashCredit memory) {
-        return slashCredits[txHash];
     }
     
     function getAllSlashCreditTxHashes() external view returns (bytes32[] memory) {
