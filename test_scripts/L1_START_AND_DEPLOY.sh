@@ -1,10 +1,12 @@
 # forge clean
 
 # forge build
-
 ./deploy/01_deploy-symbiotic-core.sh
 
 ./deploy/02_deploy-collateral.sh
+
+./deploy/02_deploy-burner-router.sh
+
 
 ./deploy/03_deploy-vault.sh
 
@@ -12,7 +14,7 @@
 
 ./deploy/05_deploy-staker-reward.sh
 
-./deploy/07_deploy-liveness.sh
+# ./deploy/07_deploy-liveness.sh
 
 
 ./deploy/08_deploy-rewards-core.sh
@@ -21,9 +23,7 @@
 
 
 
-
-
-./multi_token_exports_local_l1.py > L1_MARCH6.fish
+./multi_token_exports_local_l1.py > L1_APRIL14.fish
 
 
 # source env.fish
