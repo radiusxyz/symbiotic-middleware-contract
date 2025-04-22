@@ -7,38 +7,31 @@ import {IValidationServiceManager} from "src/interfaces/IValidationServiceManage
 
 contract TaskManager is Ownable {
     mapping(string => IValidationServiceManager.RollupTaskInfo) public rollupTaskInfos;
-    mapping(string => mapping(uint256 => uint256)) blockNumberToTaskNumber;
+    mapping(string => mapping(uint256 => uint256)) batchNumberToTaskNumber;
     uint256 public lastEmitTime;
     uint256 public constant EMIT_DELAY = 1; // 1 second
     
-    event NewTaskCreated(string clusterId, string rollupId, uint256 referenceTaskIndex, uint256 blockNumber, bytes32 batchCommitment);
-    event TaskResponded(string clusterId, string rollupId, uint256 referenceTaskIndex, bool response, address responder);
-    event TaskThresholdMet(string clusterId, string rollupId, uint256 referenceTaskIndex);
+    
 
     constructor() Ownable(msg.sender) {}
     
     function createNewTask(
         IValidationServiceManager.Task calldata task,
-        IValidationServiceManager.DistributionParams calldata distributionParams
+        IValidationServiceManager.DistributionParams calldata distributionParams,
+        address creator
     ) external {
         uint256 latestTaskNumber = rollupTaskInfos[task.rollupId].latestTaskNumber;
         rollupTaskInfos[task.rollupId].latestTaskNumber = latestTaskNumber + 1;
         rollupTaskInfos[task.rollupId].batchCommitment[latestTaskNumber] = task.batchCommitment;
-        blockNumberToTaskNumber[task.rollupId][task.blockNumber] = latestTaskNumber;
+        batchNumberToTaskNumber[task.rollupId][task.batchNumber] = latestTaskNumber;
 
         bytes32 taskHash = keccak256(abi.encode(task));
         rollupTaskInfos[task.rollupId].taskHash[latestTaskNumber] = taskHash;
 
-        emit NewTaskCreated(task.clusterId, task.rollupId, latestTaskNumber, task.blockNumber, task.batchCommitment);
+        emit IValidationServiceManager.NewTaskCreated(task.clusterId, task.rollupId, latestTaskNumber, task.batchNumber, task.batchCommitment, creator);
     }
 
-    function respondToTask(
-        string calldata clusterId,
-        string calldata rollupId,
-        uint256 referenceTaskIndex,
-        bool response,
-        address operator
-    ) external {
+    function respondToTask( string calldata clusterId, string calldata rollupId, uint256 referenceTaskIndex, bool response, address operator ) external {
         require(
             rollupTaskInfos[rollupId].taskResponses[operator][referenceTaskIndex] == false,
             "Operator has already responded to the task"
@@ -47,7 +40,7 @@ contract TaskManager is Ownable {
         rollupTaskInfos[rollupId].taskResponses[operator][referenceTaskIndex] = response;
         rollupTaskInfos[rollupId].taskTotalResponseCount[referenceTaskIndex]++;
 
-        emit TaskResponded(clusterId, rollupId, referenceTaskIndex, response, operator);
+        emit IValidationServiceManager.TaskResponded(clusterId, rollupId, referenceTaskIndex, response, operator);
                 
         // if (rollupTaskInfos[rollupId].taskTotalResponseCount[referenceTaskIndex] == 5) {
         //     require(
@@ -75,11 +68,12 @@ contract TaskManager is Ownable {
         return rollupTaskInfos[rollupId].taskResponses[operator][taskIndex];
     }
 
-    function getTaskIndexFromBlockNumber(string calldata rollupId, uint256 blockNumber) external view returns (uint256) {
-        return blockNumberToTaskNumber[rollupId][blockNumber];
+    function getTaskIndexFromBatchNumber(string calldata rollupId, uint256 batchNumber) external view returns (uint256) {
+        return batchNumberToTaskNumber[rollupId][batchNumber];
     }
 
     function getLatestTaskNumber(string calldata rollupId) external view returns (uint256) {
         return rollupTaskInfos[rollupId].latestTaskNumber;
     }
+    
 }

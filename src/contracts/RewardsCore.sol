@@ -30,15 +30,12 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
     uint256 private constant MAX_STRING_LENGTH = 32;
     uint256 private constant MIN_RATIO = 5; // 5% minimum for each staker/operator rewards
 
-    // Immutable state variables
     address public immutable NETWORK_MIDDLEWARE_SERVICE;
 
-    // State variables
     mapping(bytes32 => RewardPoolConfig) private rewardPoolConfigs;
     mapping(bytes32 => uint256) public rewardPools;
     mapping(bytes32 => address[]) public whitelistedDepositorList;
     mapping(bytes32 => mapping(address => bool)) public isWhitelistedDepositor;
-    // New mapping to track the creator of each reward pool
     mapping(bytes32 => address) public rewardPoolCreator;
 
     constructor(address _networkMiddlewareService) Ownable(msg.sender) {
@@ -46,10 +43,7 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         NETWORK_MIDDLEWARE_SERVICE = _networkMiddlewareService;
     }
 
-    function _getRewardKey(
-        string calldata clusterId,
-        string calldata rollupId
-    ) internal pure returns (bytes32) {
+    function _getRewardKey( string calldata clusterId, string calldata rollupId ) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(clusterId, rollupId));
     }
     
@@ -60,12 +54,7 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         _;
     }
 
-    function approveRewardDistribution(
-        address network,
-        string calldata clusterId,
-        string calldata rollupId,
-        uint256 approvalAmount
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    function approveRewardDistribution( address network, string calldata clusterId, string calldata rollupId, uint256 approvalAmount ) external nonReentrant whenNotPaused returns (uint256) {
 
         address middleware = INetworkMiddlewareService(
             NETWORK_MIDDLEWARE_SERVICE
@@ -109,11 +98,7 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         return approvalAmount;
     }
 
-    function updateLastDistribution(
-        address network,
-        string calldata clusterId,
-        string calldata rollupId
-    ) external nonReentrant whenNotPaused {
+    function updateLastDistribution( address network, string calldata clusterId, string calldata rollupId ) external nonReentrant whenNotPaused {
         address middleware = INetworkMiddlewareService(
             NETWORK_MIDDLEWARE_SERVICE
         ).middleware(network);
@@ -125,20 +110,7 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         config.lastDistribution = block.timestamp;
     }
 
-    function getDistributionInfo(
-        string calldata clusterId,
-        string calldata rollupId
-    )
-        external
-        view
-        returns (
-            bool isEligible,
-            uint256 availableAmount,
-            address rewardToken,
-            uint256 timeUntilNextDistribution,
-            uint256 operatorAmount,
-            uint256 stakerAmount
-        )
+    function getDistributionInfo( string calldata clusterId, string calldata rollupId ) external view returns ( bool isEligible, uint256 availableAmount, address rewardToken, uint256 timeUntilNextDistribution, uint256 operatorAmount, uint256 stakerAmount )
     {
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
         RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
@@ -166,25 +138,10 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
             (config.amounterPerTask * config.stakerRewardRatio) /
             100;
 
-        return (
-            isEligible,
-            config.amounterPerTask,
-            config.rewardToken,
-            timeUntilNextDistribution,
-            operatorAmount,
-            stakerAmount
-        );
+        return ( isEligible, config.amounterPerTask, config.rewardToken, timeUntilNextDistribution, operatorAmount, stakerAmount );
     }
 
-    function addRewardPoolConfig(
-        string calldata clusterId,
-        string calldata rollupId,
-        address rewardToken,
-        uint256 amounterPerTask,
-        uint256 distributionInterval,
-        uint256 operatorRewardRatio,
-        uint256 stakerRewardRatio
-    ) external whenNotPaused {
+    function addRewardPoolConfig( string calldata clusterId, string calldata rollupId, address rewardToken, uint256 amounterPerTask, uint256 distributionInterval, uint256 operatorRewardRatio, uint256 stakerRewardRatio ) external whenNotPaused {
 
         if (amounterPerTask < MIN_REWARD_AMOUNT)
             revert AmountTooLow(amounterPerTask, MIN_REWARD_AMOUNT);
@@ -257,21 +214,10 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         config.operatorRewardRatio = newOperatorRewardRatio;
         config.stakerRewardRatio = newStakerRewardRatio;
 
-        emit RewardPoolConfigUpdated(
-            clusterId,
-            rollupId,
-            newDistributionInterval,
-            newAmounterPerTask,
-            newOperatorRewardRatio,
-            newStakerRewardRatio
-        );
+        emit RewardPoolConfigUpdated( clusterId, rollupId, newDistributionInterval, newAmounterPerTask, newOperatorRewardRatio, newStakerRewardRatio );
     }
 
-    function depositRewards(
-        string calldata clusterId,
-        string calldata rollupId,
-        uint256 amount
-    ) external nonReentrant whenNotPaused {
+    function depositRewards( string calldata clusterId, string calldata rollupId, uint256 amount ) external nonReentrant whenNotPaused {
 
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
         if (!isWhitelistedDepositor[rewardKey][msg.sender])
@@ -293,20 +239,10 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         token.safeTransferFrom(msg.sender, address(this), amount);
         rewardPools[rewardKey] = newBalance;
 
-        emit RewardsDeposited(
-            clusterId,
-            rollupId,
-            msg.sender,
-            amount,
-            newBalance
-        );
+        emit RewardsDeposited( clusterId, rollupId, msg.sender, amount, newBalance );
     }
 
-    function emergencyWithdraw(
-        string calldata clusterId,
-        string calldata rollupId,
-        uint256 amount
-    ) external onlyPoolCreator(clusterId, rollupId) nonReentrant whenNotPaused {
+    function emergencyWithdraw( string calldata clusterId, string calldata rollupId, uint256 amount ) external onlyPoolCreator(clusterId, rollupId) nonReentrant whenNotPaused {
 
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
         RewardPoolConfig storage config = rewardPoolConfigs[rewardKey];
@@ -332,11 +268,7 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         emit EmergencyWithdrawn(clusterId, rollupId, msg.sender, amount);
     }
 
-    function addWhitelistedDepositor(
-        string calldata clusterId,
-        string calldata rollupId,
-        address newDepositor
-    ) external onlyPoolCreator(clusterId, rollupId) whenNotPaused {
+    function addWhitelistedDepositor( string calldata clusterId, string calldata rollupId, address newDepositor ) external onlyPoolCreator(clusterId, rollupId) whenNotPaused {
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
         if (isWhitelistedDepositor[rewardKey][newDepositor]) 
             revert DepositorAlreadyWhitelisted(newDepositor);
@@ -350,11 +282,7 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         emit WhitelistedDepositorAdded(clusterId, rollupId, newDepositor);
     }
 
-    function removeWhitelistedDepositor(
-        string calldata clusterId,
-        string calldata rollupId,
-        address depositorToRemove
-    ) external onlyPoolCreator(clusterId, rollupId) whenNotPaused {
+    function removeWhitelistedDepositor( string calldata clusterId, string calldata rollupId, address depositorToRemove ) external onlyPoolCreator(clusterId, rollupId) whenNotPaused {
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
         if (!isWhitelistedDepositor[rewardKey][depositorToRemove]) 
             revert DepositorNotWhitelisted(depositorToRemove);
@@ -363,7 +291,6 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
 
         isWhitelistedDepositor[rewardKey][depositorToRemove] = false;
 
-        // Remove from array efficiently
         for (uint i = 0; i < whitelistedDepositorList[rewardKey].length; i++) {
             if (whitelistedDepositorList[rewardKey][i] == depositorToRemove) {
                 whitelistedDepositorList[rewardKey][i] = whitelistedDepositorList[rewardKey][
@@ -377,38 +304,23 @@ contract RewardsCore is IRewardsCore, Ownable, ReentrancyGuard, Pausable {
         emit WhitelistedDepositorRemoved(clusterId, rollupId, depositorToRemove);
     }
 
-    function getRewardPoolCreator(
-        string calldata clusterId,
-        string calldata rollupId
-    ) external view returns (address) {
+    function getRewardPoolCreator( string calldata clusterId, string calldata rollupId ) external view returns (address) {
         return rewardPoolCreator[_getRewardKey(clusterId, rollupId)];
     }
 
-    function getRewardPoolConfig(
-        string calldata clusterId,
-        string calldata rollupId
-    ) external view returns (RewardPoolConfig memory) {
+    function getRewardPoolConfig( string calldata clusterId, string calldata rollupId ) external view returns (RewardPoolConfig memory) {
         return rewardPoolConfigs[_getRewardKey(clusterId, rollupId)];
     }
 
-    function getWhitelistedDepositors(
-        string calldata clusterId,
-        string calldata rollupId
-    ) external view returns (address[] memory) {
+    function getWhitelistedDepositors( string calldata clusterId, string calldata rollupId ) external view returns (address[] memory) {
         return whitelistedDepositorList[_getRewardKey(clusterId, rollupId)];
     }
 
-    function getRewardPoolBalance(
-        string calldata clusterId,
-        string calldata rollupId
-    ) external view returns (uint256) {
+    function getRewardPoolBalance( string calldata clusterId, string calldata rollupId ) external view returns (uint256) {
         return rewardPools[_getRewardKey(clusterId, rollupId)];
     }
 
-    function rewardPoolExists(
-        string calldata clusterId,
-        string calldata rollupId
-    ) external view returns (bool) {
+    function rewardPoolExists( string calldata clusterId, string calldata rollupId ) external view returns (bool) {
         bytes32 rewardKey = _getRewardKey(clusterId, rollupId);
         return rewardPoolConfigs[rewardKey].isActive;
     }

@@ -43,6 +43,8 @@ contract Registry is Ownable {
 
     mapping(address => IValidationServiceManager.Vault) public vaultDetails;
     mapping(address => uint256) public minimumStakingAmounts;
+    mapping(address => uint256) public slashAmounts;
+
 
     // TxOrderer Registry state variables integrated directly into Registry
     mapping(address => Checkpoints.Trace208) private operatorToIndex;
@@ -55,6 +57,8 @@ contract Registry is Ownable {
 
     event RegisterToken(address token);
     event SetMinimumStakeAmount(address token, uint256 minimumStakeAmount);
+    event SetSlashAmount(address token, uint256 amount);
+
     event UnregisterToken(address token);
 
     event RegisterVault(address vault, address stakerRewards, address operatorRewards);
@@ -274,8 +278,16 @@ contract Registry is Ownable {
 
     function setMinimumStakingAmount(address token, uint256 amount) external onlyOwner {
         minimumStakingAmounts[token] = amount;
-
         emit SetMinimumStakeAmount(token, amount);
+    }
+
+    function setSlashAmount(address token, uint256 amount) external onlyOwner {
+        slashAmounts[token] = amount;
+        emit SetSlashAmount(token, amount); 
+    }
+
+    function getSlashAmount(address token) public view returns (uint256) {
+        return slashAmounts[token];
     }
 
     function pauseToken(address token) external onlyOwner {
@@ -548,11 +560,7 @@ contract Registry is Ownable {
         return stakeAmount;
     }
 
-    function _getOperatorVaultStake(
-        address vault, 
-        address operator, 
-        uint48 timestamp
-    ) internal view returns (uint256 totalStake) {
+    function _getOperatorVaultStake( address vault, address operator, uint48 timestamp ) internal view returns (uint256 totalStake) {
         for (uint96 j = 0; j < subnetworkCount; ++j) {
             totalStake += IBaseDelegator(IVault(vault).delegator()).stakeAt(
                 NETWORK.subnetwork(j), operator, timestamp, new bytes(0)
@@ -683,11 +691,7 @@ contract Registry is Ownable {
         return hasEnoughStake;
     }
 
-    function _wasActiveAt(
-        uint48 enabledTime,
-        uint48 disabledTime,
-        uint48 timestamp
-    ) internal pure returns (bool) {
+    function _wasActiveAt( uint48 enabledTime, uint48 disabledTime, uint48 timestamp ) internal pure returns (bool) {
         return
             enabledTime != 0 &&
             enabledTime <= timestamp &&
