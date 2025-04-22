@@ -47,7 +47,7 @@ contract BurnerRouterDeploy is Script, Utils {
             IBurnerRouter.InitParams({
                 collateral: defaultCollateralAddress,
                 owner: owner,
-                delay: 10,
+                delay: 1,
                 globalReceiver: owner,
                 networkReceivers: networkReceivers,
                 operatorNetworkReceivers: emptyOperatorNetworkReceivers
@@ -65,7 +65,7 @@ contract BurnerRouterDeploy is Script, Utils {
             IBurnerRouter.InitParams({
                 collateral: stETHCollateralAddress,
                 owner: owner,
-                delay: 10,
+                delay: 1,
                 globalReceiver: owner,
                 networkReceivers: networkReceivers,
                 operatorNetworkReceivers: emptyOperatorNetworkReceivers
@@ -82,7 +82,7 @@ contract BurnerRouterDeploy is Script, Utils {
             IBurnerRouter.InitParams({
                 collateral: wBTCCollateralAddress,
                 owner: owner,
-                delay: 10,
+                delay: 1,
                 globalReceiver: owner,
                 networkReceivers: networkReceivers,
                 operatorNetworkReceivers: emptyOperatorNetworkReceivers
