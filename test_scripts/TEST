@@ -322,8 +322,8 @@ cast send $DEFAULT_OPERATOR_REWARDS "claimRewards(address,address,address,uint25
 $DEFAULT_OPERATOR_ADDRESS \
 $NETWORK_ADDRESS \
 $DEFAULT_TOKEN_ADDRESS \
-2381552831290134241 \
-"[0x3cf1315bbf4edffb404380fbff17c068fa633c5bb09fd97bf33c5f4eea2bdd9f]" \
+1013431864658858520 \
+"[0xe7434603213a3e2de7bbcc79d43024041e687b3fdecc765a0aeec4480ff5c392]" \
 --rpc-url $RPC_URL \
 --private-key $DEFAULT_OPERATOR_PRIVATE_KEY
 
@@ -550,7 +550,7 @@ Cycle complete at 2025년 3월 11일 화요일 11시 03분 06초 KST. Waiting fo
 ^C⏎
 …tta@Martins-MacBook-Pro ~/R/s/test_scripts (feat/InitialRewardSystem) [SIGINT]  cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS \
                                                                                            "getDistributionData(string,string,uint256)(address[],bytes32[],uint256[],uint256[])" \
-                                                                                           "$CLUSTER_ID" "$ROLLUP_ID" 2 \
+                                                                                           "$CLUSTER_ID" "$ROLLUP_ID" 136 \
                                                                                            --rpc-url $RPC_URL
 [0xa26a3edfa517093cCc82f11919f12e729c30A41f, 0x04f107dc9b52beA893824acdf2D49A36F2Bea989, 0x4ce789c1774c852FA9E248E8EcE4E4e936E92E73]
 [0x13801edbd896ac53797fa5ef2ea8a5dc7065cf88225fdd0b0110eec63c407322, 0x0c19a92de474cbe0f7a475395b5cd3829d502a718317d4580a3d59aeca0abc01, 0x8671451e28cf475bbd30e996fac49256d23b68095288a87627d5c8acf1127440]
@@ -567,7 +567,7 @@ Cycle complete at 2025년 3월 11일 화요일 11시 03분 06초 KST. Waiting fo
   $DEFAULT_VAULT_ADDRESS \
   $DEFAULT_OPERATOR_ADDRESS \
   10 \
-  1743043618
+  1744247121
 
 
 
@@ -630,7 +630,7 @@ cast call $STETH_COLLATERAL_ADDRESS "balanceOf(address)(uint256)" $NETWORK_ADDRE
 
 cast call $STETH_TOKEN_ADDRESS "balanceOf(address)(uint256)" $NETWORK_ADDRESS  
 cast call $STETH_TOKEN_ADDRESS "balanceOf(address)(uint256)" $STETH_VAULT_BURNER_ROUTER  
-cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $DEFAULT_OPERATONETR_ADDRESS  
+cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS  
 
 
 
@@ -639,5 +639,86 @@ cast call $DEFAULT_TOKEN_ADDRESS "balanceOf(address)(uint256)" 0xdF14d78165Ae80A
 
 cast call $DEFAULT_COLLATERAL_ADDRESS "balanceOf(address)(uint256)" 0xdF14d78165Ae80AB2D6E30361426672cDc4b9315  
 
-cast call $WBTC_OPERATOR_REWARDS --rpc-url $RPC_URL \
-"root(address,address)(bytes32)" $NETWORK_ADDRESS $WBTC_TOKEN_ADDRESS
+cast call $DEFAULT_OPERATOR_REWARDS --rpc-url $RPC_URL \
+"root(address,address)(bytes32)" $NETWORK_ADDRESS $DEFAULT_TOKEN_ADDRESS
+
+
+ cast send $DEFAULT_VAULT_BURNER_ROUTER \
+  --rpc-url $RPC_URL \
+  --private-key $NETWORK_PRIVATE_KEY \
+  "triggerTransfer(address)" \
+  $NETWORK_ADDRESS    
+
+cast call $DEFAULT_VAULT_BURNER_ROUTER "networkReceiver(address)(address)" $NETWORK_ADDRESS
+
+
+cast call $DEFAULT_VAULT_BURNER_ROUTER "balanceOf(address)(uint256)" 0xdF14d78165Ae80AB2D6E30361426672cDc4b9315  
+
+cast send $DEFAULT_VAULT_BURNER_ROUTER
+  function triggerTransfer(
+        address receiver
+
+
+
+
+cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $STETH_OPERATOR_PRIVATE_KEY_SECONDARY \
+"executeDistributions(string clusterId, string rollupId)" $CLUSTER_ID $ROLLUP_ID
+
+
+    function getDistributionData( string memory clusterId, string memory rollupId, uint256 referenceTaskId ) public view returns (
+
+
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $STETH_OPERATOR_PRIVATE_KEY_SECONDARY \
+"getDistributionData(string clusterId, string rollupId, uint256 referenceTaskId)" $CLUSTER_ID $ROLLUP_ID 6
+
+
+
+cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS \
+"getDistributionData(string,string,uint256)(address[],bytes32[],uint256[],uint256[])" \
+"$CLUSTER_ID" "$ROLLUP_ID" 4 \
+--rpc-url $RPC_URL
+
+
+
+curl -X POST https://ed65-59-10-110-198.ngrok-free.app/api/rewards \
+      -H "Content-Type: application/json" \
+      -d '{
+  "jsonrpc": "2.0",
+  "method": "get_create_task_rewards",
+  "params": {
+      "cluster_id": "'$CLUSTER_ID'",
+      "rollup_id": "'$ROLLUP_ID'"
+  },
+  "id": 1
+}'
+
+
+cast call $WBTC_VAULT_ADDRESS "totalStake()(uint256)" --rpc-url $RPC_URL
+cast call $STETH_VAULT_ADDRESS "totalStake()(uint256)" --rpc-url $RPC_URL
+
+
+    function getCurrentOperatorTokenStake(address operator, address token) public view returns (uint256 stakeAmount) {
+
+cast call $VSM_REGISTRY "getCurrentOperatorTokenStake(address operator, address token)(uint256)" $DEFAULT_OPERATOR_ADDRESS $WBTC_TOKEN_ADDRESS --rpc-url $RPC_URL
+
+
+cast call $VSM_REGISTRY "getCurrentOperatorTokenStake(address operator, address token)(uint256)" $STETH_OPERATOR_ADDRESS $STETH_TOKEN_ADDRESS --rpc-url $RPC_URL
+
+cast call $REGISTRY_ADDRESS "getCurrentOperatorTokenStake(address,address)(uint256)" <OPERATOR_ADDRESS> <TOKEN_ADDRESS> --rpc-url $RPC_URL
+
+
+
+cast call $VSM_REGISTRY "getCurrentOperatorAllTokenStakes(address operator)(uint256)" $DEFAULT_OPERATOR_ADDRESS --rpc-url $RPC_URL
+
+cast call $VSM_REGISTRY "getCurrentOperatorAllTokenStakes(address operator)(uint256)" $STETH_OPERATOR_ADDRESS --rpc-url $RPC_URL
+
+cast call $VSM_REGISTRY "getCurrentOperatorAllTokenStakes(address operator)(uint256)" $WBTC_OPERATOR_ADDRESS --rpc-url $RPC_URL
+
+
+cast call $VSM_REGISTRY "getCurrentOperatorTokenStake(address operator, address token)(uint256)" $STETH_OPERATOR_ADDRESS_SECONDARY $STETH_TOKEN_ADDRESS --rpc-url $RPC_URL
+
+# For NetworkRestakeDelegator:
+cast call $WBTC_DELEGATOR_ADDRESS "operatorNetworkShares(bytes32,address)(uint256)" $SUBNET_ID $WBTC_OPERATOR_ADDRESS --rpc-url $RPC_URL
+
+# For FullRestakeDelegator:
+cast call $DELEGATOR "operatorNetworkLimit(bytes32,address)(uint256)" $SUBNET_ID $OPERATOR_ADDRESS --rpc-url $RPC_URL

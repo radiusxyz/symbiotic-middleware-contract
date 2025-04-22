@@ -8,11 +8,11 @@ create_new_task() {
     echo "Creating task #$TASK_COUNT..."
     
     # Query the rewards endpoint and store the response
-    response=$(curl -X POST http://localhost:3000/create_new_task \
+    response=$(curl -X POST http://localhost:3000/api/rewards \
         -H "Content-Type: application/json" \
         -d '{
             "jsonrpc": "2.0",
-            "method": "get_rewards",
+            "method": "get_create_task_rewards",
             "params": {
                 "cluster_id": "'$CLUSTER_ID'",
                 "rollup_id": "'$ROLLUP_ID'"
@@ -40,7 +40,7 @@ create_new_task() {
     echo "----------------------------------------"
 
     # Build the formatted arrays
-    rewarded_task_index=$(echo "$response" | jq -r '.result.rewarded_task_index')
+    pending_reward_task_index=$(echo "$response" | jq -r '.result.pending_reward_task_index')
     vaults_formatted=$(format_array "address" "${vaults[@]}")
     merkle_roots_formatted=$(format_array "hex" "${merkle_roots[@]}")
     staker_rewards_formatted=$(format_array "number" "${staker_rewards[@]}")
@@ -51,78 +51,63 @@ create_new_task() {
     # Execute the cast send command directly
     cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS \
       "createNewTask((string,string,uint256,bytes32),(uint256,address[],bytes32[],uint256[],uint256[]))" \
-      "(\"$CLUSTER_ID\",\"$ROLLUP_ID\",12,0x287b58b93ed6c17ace087bb87f611bf21102c0602b0956736b6e523fb41c328d)" \
-      "($rewarded_task_index,$vaults_formatted,$merkle_roots_formatted,$staker_rewards_formatted,$operator_rewards_formatted)" \
-      --rpc-url $RPC_URL --private-key $DEFAULT_OPERATOR_PRIVATE_KEY
+      "(\"$CLUSTER_ID\",\"$ROLLUP_ID\",5,0x9ecb94ecf2bb69f26bec3746ec442e97d2895891e88b10c4ac8abdc910301072)" \
+      "($pending_reward_task_index,$vaults_formatted,$merkle_roots_formatted,$staker_rewards_formatted,$operator_rewards_formatted)" \
+      --rpc-url $RPC_URL --private-key $STETH_OPERATOR_PRIVATE_KEY
 
     # Print confirmation
     echo "Command executed with exit code: $?"
 }
 
-# Function to respond to tasks
+# Function to respond to tasks in parallel
 respond_to_task() {
     local task_count=$1
-    echo "Responding to task #$task_count..."
+    echo "Responding to task #$task_count in parallel..."
     
-    # First operator response
-    cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "respondToTask(string,string,uint256,bool)" \
-      $CLUSTER_ID \
-      $ROLLUP_ID \
-      $task_count \
-      true \
-      --rpc-url $RPC_URL \
-      --private-key $DEFAULT_OPERATOR_PRIVATE_KEY
-    sleep 0.1
+    # Array to store background process IDs
+    pids=()
+    operator_names=("DEFAULT" "WBTC" "STETH" "WBTC_SECONDARY" "STETH_SECONDARY")
+    operator_keys=("$DEFAULT_OPERATOR_PRIVATE_KEY" "$WBTC_OPERATOR_PRIVATE_KEY" "$WBTC_OPERATOR_PRIVATE_KEY_SECONDARY" "$STETH_OPERATOR_PRIVATE_KEY_SECONDARY")
     
-    # WBTC operator response
-    cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "respondToTask(string,string,uint256,bool)" \
-      $CLUSTER_ID \
-      $ROLLUP_ID \
-      $task_count \
-      true \
-      --rpc-url $RPC_URL \
-      --private-key $WBTC_OPERATOR_PRIVATE_KEY
-    sleep 0.1
+    # Start all tasks in parallel
+    for i in "${!operator_keys[@]}"; do
+        echo "Starting ${operator_names[$i]} operator response..."
+        
+        # Create a temporary file to store the exit status
+        temp_file=$(mktemp /tmp/operator_response_${operator_names[$i]}.XXXXXX)
+        
+        # Run the cast send command in the background and save its exit status
+        (
+            cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "respondToTask(string,string,uint256,bool)" \
+                $CLUSTER_ID \
+                $ROLLUP_ID \
+                $task_count \
+                true \
+                --rpc-url $RPC_URL \
+                --private-key "${operator_keys[$i]}"
+            echo $? > "$temp_file"
+        ) &
+        
+        # Store the process ID and temp file path
+        pids+=($!)
+        temp_files+=("$temp_file")
+    done
     
-    # STETH operator response
-    cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "respondToTask(string,string,uint256,bool)" \
-      $CLUSTER_ID \
-      $ROLLUP_ID \
-      $task_count \
-      true \
-      --rpc-url $RPC_URL \
-      --private-key $STETH_OPERATOR_PRIVATE_KEY
-    sleep 0.1
-    
-    # DEFAULT SECONDARY operator response
-    cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "respondToTask(string,string,uint256,bool)" \
-      $CLUSTER_ID \
-      $ROLLUP_ID \
-      $task_count \
-      true \
-      --rpc-url $RPC_URL \
-      --private-key $DEFAULT_OPERATOR_PRIVATE_KEY_SECONDARY
-    sleep 0.1
-    
-    # WBTC SECONDARY operator response
-    cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "respondToTask(string,string,uint256,bool)" \
-      $CLUSTER_ID \
-      $ROLLUP_ID \
-      $task_count \
-      true \
-      --rpc-url $RPC_URL \
-      --private-key $WBTC_OPERATOR_PRIVATE_KEY_SECONDARY
-    sleep 0.1
-    
-    # STETH SECONDARY operator response
-    cast send $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS "respondToTask(string,string,uint256,bool)" \
-      $CLUSTER_ID \
-      $ROLLUP_ID \
-      $task_count \
-      true \
-      --rpc-url $RPC_URL \
-      --private-key $STETH_OPERATOR_PRIVATE_KEY_SECONDARY
-    sleep 0.1
+    # Wait for all background processes to complete
+    echo "Waiting for all operator responses to complete..."
+    for i in "${!pids[@]}"; do
+        wait "${pids[$i]}"
+        exit_status=$(cat "${temp_files[$i]}")
+        
+        if [ "$exit_status" -eq 0 ]; then
+            echo "${operator_names[$i]} operator response completed successfully"
+        else
+            echo "WARNING: ${operator_names[$i]} operator response failed with exit status $exit_status"
+        fi
+        
+        # Clean up the temporary file
+        rm "${temp_files[$i]}"
+    done
     
     echo "All operators have responded to task #$task_count"
 }
@@ -169,7 +154,7 @@ while true; do
     echo "Waiting 3 seconds before responding to task..."
     sleep 3
     
-    # Respond to the task
+    # Respond to the task in parallel
     respond_to_task $TASK_COUNT
     
     # Increment task counter
