@@ -9,13 +9,16 @@ ___DEPLOY___: ##
 build-contracts: ## builds all contracts
 	forge build
 
-deploy-all: deploy-symbiotic-core deploy-collateral deploy-vault deploy-operator-reward deploy-staker-reward deploy-liveness deploy-rewards-core deploy-validation-service-manager ## Deploy all contracts
+deploy-all: deploy-symbiotic-core deploy-collateral deploy-burner-router deploy-vault deploy-operator-reward deploy-staker-reward deploy-liveness deploy-rewards-core deploy-validation-service-manager ## Deploy all contracts
 
 deploy-symbiotic-core: ## Deploy symbiotic core
 	./utils/deploy/01_deploy-symbiotic-core.sh
 
 deploy-collateral: ## Deploy collateral
 	./utils/deploy/02_deploy-collateral.sh
+
+deploy-burner-router: ## Deploy Burner Router
+	./utils/deploy/02_deploy-burner-router.sh
 
 deploy-vault: ## Deploy vault
 	./utils/deploy/03_deploy-vault.sh
