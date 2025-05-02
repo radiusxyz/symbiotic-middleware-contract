@@ -1,54 +1,54 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+// // SPDX-License-Identifier: UNLICENSED
+// pragma solidity 0.8.25;
 
-import {Utils} from "../../utils/Utils.sol";
+// import {Utils} from "../../utils/Utils.sol";
 
-import {Script, console2} from "forge-std/src/Script.sol";
-import {ValidationServiceManager} from "src/contracts/ValidationServiceManager.sol";
+// import {Script, console2} from "forge-std/src/Script.sol";
+// import {ValidationServiceManager} from "src/contracts/ValidationServiceManager.sol";
 
-import {INetworkRegistry} from "@symbiotic-core/src/interfaces/INetworkRegistry.sol";
-import {IOperatorRegistry} from "@symbiotic-core/src/interfaces/IOperatorRegistry.sol";
-import {IOptInService} from "@symbiotic-core/src/interfaces/service/IOptInService.sol";
-import {IVault} from "@symbiotic-core/src/interfaces/vault/IVault.sol";
+// import {INetworkRegistry} from "@symbiotic-core/src/interfaces/INetworkRegistry.sol";
+// import {IOperatorRegistry} from "@symbiotic-core/src/interfaces/IOperatorRegistry.sol";
+// import {IOptInService} from "@symbiotic-core/src/interfaces/service/IOptInService.sol";
+// import {IVault} from "@symbiotic-core/src/interfaces/vault/IVault.sol";
 
-contract ValidationServiceManagerHoleskyDeployer is Script, Utils {
-    function run() external {
-        vm.startBroadcast();
+// contract ValidationServiceManagerHoleskyDeployer is Script, Utils {
+//     function run() external {
+//         vm.startBroadcast();
 
-        (,, address owner) = vm.readCallers();
+//         (,, address owner) = vm.readCallers();
 
-        // dynamic
-        address network = vm.envAddress("NETWORK_ADDRESS");
+//         // dynamic
+//         address network = vm.envAddress("NETWORK_ADDRESS");
 
-        // fixed
-        address operatorRegistryAddress = vm.envAddress("OPERATOR_REGISTRY_CONTRACT_ADDRESS");
-        address vaultRegistry = vm.envAddress("VAULT_FACTORY_CONTRACT_ADDRESS");
-        address slasherRegistry = vm.envAddress("SLASHER_FACTORY_CONTRACT_ADDRESS");
+//         // fixed
+//         address operatorRegistryAddress = vm.envAddress("OPERATOR_REGISTRY_CONTRACT_ADDRESS");
+//         address vaultRegistry = vm.envAddress("VAULT_FACTORY_CONTRACT_ADDRESS");
+//         address slasherRegistry = vm.envAddress("SLASHER_FACTORY_CONTRACT_ADDRESS");
 
-        address operatorNetworkOptInServiceAddress = vm.envAddress("OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS");
+//         address operatorNetworkOptInServiceAddress = vm.envAddress("OPERATOR_NETWORK_OPT_IN_SERVICE_CONTRACT_ADDRESS");
 
-        uint48 validationServiceManagerEpochDuration = uint48(vm.envUint("VALIDATION_SERVICE_MANAGER_EPOCH_DURATION"));
+//         uint48 validationServiceManagerEpochDuration = uint48(vm.envUint("VALIDATION_SERVICE_MANAGER_EPOCH_DURATION"));
 
 
-         address stakerRewardAddress = address(0x0000000000000000000000000000000000000000);
-        address operatorRewardAddress = address(0x0000000000000000000000000000000000000000);
-        address rewardManagerAddress = address(0x0000000000000000000000000000000000000000);
+//          address stakerRewardAddress = address(0x0000000000000000000000000000000000000000);
+//         address operatorRewardAddress = address(0x0000000000000000000000000000000000000000);
+//         address rewardManagerAddress = address(0x0000000000000000000000000000000000000000);
 
-        ValidationServiceManager validationServiceManager = new ValidationServiceManager(
-            network, 
+//         ValidationServiceManager validationServiceManager = new ValidationServiceManager(
+//             network, 
 
-            vaultRegistry, 
-            operatorNetworkOptInServiceAddress, 
+//             vaultRegistry, 
+//             operatorNetworkOptInServiceAddress, 
 
-            validationServiceManagerEpochDuration, 
-            stakerRewardAddress,
-            operatorRewardAddress,
-            rewardManagerAddress,
-            slasherRegistry
-        );
+//             validationServiceManagerEpochDuration, 
+//             stakerRewardAddress,
+//             operatorRewardAddress,
+//             rewardManagerAddress,
+//             slasherRegistry
+//         );
 
-        console2.log("VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS=", address(validationServiceManager));
+//         console2.log("VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS=", address(validationServiceManager));
 
-        vm.stopBroadcast();
-    }
-}
+//         vm.stopBroadcast();
+//     }
+// }
