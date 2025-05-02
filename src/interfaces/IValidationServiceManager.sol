@@ -50,6 +50,7 @@ interface IValidationServiceManager {
     error TokenTransferFailed();
     error SlashCreditAlreadyProcessed();
     error SlashCreditNotFound();
+    error InvalidSlashPeriod();
 
     struct Vault {
         address tokenAddress;
@@ -66,18 +67,11 @@ interface IValidationServiceManager {
         uint256[] totalOperatorReward;
     }
 
-    // struct TaskParams {
-    //     string clusterId;
-    //     string rollupId;
-    //     uint256 blockNumber;
-    //     bytes32 batchCommitment;
-    // }
-
     struct TransactionData {
-        bytes32 txHash;        // Hash of the transaction
-        uint256 txIndex;       // Index/order of the transaction in the original set
-        bytes32[] preMerklePath; // Pre-Merkle-Path (variable length)
-        bool exists;           // Flag to check if the data exists
+        bytes32 txHash;         
+        uint256 txIndex;       
+        bytes32[] preMerklePath; 
+        bool exists;          
     }
 
     struct StakeInfo {
@@ -95,7 +89,7 @@ interface IValidationServiceManager {
     struct Task {
         string clusterId;
         string rollupId;
-        uint256 blockNumber;
+        uint256 batchNumber;
         bytes32 batchCommitment;
     }
 
@@ -106,18 +100,20 @@ interface IValidationServiceManager {
         Processed
     }
 
-struct SlashRequest {
-        address operator;      
-        address requester;    
+    struct SlashRequest {
+        address operator;
+        address requester;
+        string clusterId;
         string rollupId;
-        uint256 blockHeight;
+        uint256 batchNumber;
         bytes32 txHash;
         uint256 txOrder;
-        bytes32[] preMerklePath; 
-        bytes signature;      
-        uint256 depositAmount; 
-        Status status;         
-        bool exists;            
+        bytes32[] preMerklePath;
+        bytes signature;
+        uint256 depositAmount;
+        Status status;
+        bool exists;
+        uint256 timestamp; 
     }
     struct SlashResponse {
         address responder;
@@ -153,7 +149,7 @@ struct SlashRequest {
     event UpdateTxOrdererAddress(address operator, address txOrderer);
     event UnregisterOperator(address operator);    
 
-    event NewTaskCreated(string clusterId, string rollupId, uint256 referenceTaskIndex, uint256 blockNumber, bytes32 batchCommitment);
+    event NewTaskCreated(string clusterId, string rollupId, uint256 referenceTaskIndex, uint256 batchNumber, bytes32 batchCommitment, address creator);
 
     event TaskResponded(string clusterId, string rollupId, uint256 referenceTaskIndex, bool response, address responder);
 
@@ -162,12 +158,9 @@ struct SlashRequest {
     event TaskThresholdMet(string clusterId, string rollupId, uint256 referenceTaskIndex);
     event DistributionDataSaved(string clusterId, string rollupId, uint256 rewardedTaskindex);
     
-    // Event for successful direct slash
     event OperatorSlashed(address indexed vault, address indexed operator, uint256 amount, bool isVeto);
 
-    // Event for veto slash request
-    event OperatorSlashRequested(address indexed vault, address indexed operator, uint256 amount, uint256 slashIndex);
-    event SlashRequestSubmitted(uint256 indexed requestId, address indexed submitter, uint256 blockNumber, bytes32 txHash);
+    event SlashRequestSubmitted(uint256 indexed requestId, address indexed submitter, uint256 batchNumber, bytes32 txHash);
     event SlashResponseSubmitted(uint256 indexed requestId, address indexed responder, bool isValid);
     event SlashRequestResolved(uint256 indexed requestId, bool wasValid);
 
@@ -175,9 +168,11 @@ struct SlashRequest {
     event SlashRequested(
         bytes32 indexed txHash,
         address indexed operator,
-        address indexed requester,
+        string clusterId,
         string rollupId,
-        uint256 blockHeight
+        uint256 batchNumber,   
+        uint256 txOrder,
+        address indexed requester
     );
 
     event SlashResponded(
@@ -197,13 +192,13 @@ struct SlashRequest {
 
     struct SlashCredit {
         address vault;
-        address requester;         // Address that requested the slash
-        address tokenAddress;      // The token being slashed
-        uint256 amount;            // Amount of tokens to credit
-        uint64 slasherType;        // 0 for instant, 1 for veto
-        uint256 slashIndex;        // For veto slashers, the index of the slash request
-        SlashCreditStatus status;  // Status of this credit
-        uint256 timestamp;         // When this credit was created
+        address requester;         
+        address tokenAddress;      
+        uint256 amount;            
+        uint64 slasherType;       
+        uint256 slashIndex;        
+        SlashCreditStatus status;  
+        uint256 timestamp;         
     }
 
     event SlashCreditCreated(
@@ -215,7 +210,6 @@ struct SlashRequest {
         uint256 slashIndex
     );
     
-    // Event for slash credit processing
     event SlashCreditProcessed(
         bytes32 indexed txHash,
         uint256 indexed creditIndex,
