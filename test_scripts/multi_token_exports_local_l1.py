@@ -143,7 +143,7 @@ print('\n# Rollups')
 
 
 print('set -x CLUSTER_ID radius')
-print('set -x MAX_SEQUENCER_NUMBER 30')
+print('set -x MAX_TX_ORDERER_NUMBER 30')
 print('set -x ROLLUP_ID rollup_id_2')
 print('set -x OWNER_ADDRESS 0x045D9E0E4c88735ae6c4614E077593c6b0e32c33')
 print('set -x ROLLUP_TYPE polygon_cdk')

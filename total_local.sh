@@ -175,7 +175,7 @@ cast call $VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url $RPC_URL \
 #####################################################################################
 # initializeCluster (13번)
 CLUSTER_ID="radius"
-MAX_SEQUENCER_NUMBER=30
+MAX_TX_ORDERER_NUMBER=30
 
 ROLLUP_ID="rollup_id"
 OWNER_ADDRESS="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
@@ -191,7 +191,7 @@ cast call $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL \
 "getClustersByOwner(address owner)(string[])" $NETWORK_ADDRESS
 #####################
 cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_SEQUENCER_NUMBER
+"initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_TX_ORDERER_NUMBER
 #####################
 
 # addRollup (14번)
@@ -227,7 +227,7 @@ cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $OPERATING
 ################## Testing ##################
 forge script script/deploy/LivenessRadiusDeployer.sol:LivenessRadiusDeployer --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY --broadcast -vvvv
 cast send 0x4c5859f0F772848b2D91F1D83E2Fe57935348029 --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_SEQUENCER_NUMBER
+"initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_TX_ORDERER_NUMBER
 cast call 0x4c5859f0F772848b2D91F1D83E2Fe57935348029 --rpc-url $RPC_URL \
 "getClustersByOwner(address owner)(string[])" $NETWORK_ADDRESS
 cast send 0x4c5859f0F772848b2D91F1D83E2Fe57935348029 --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \

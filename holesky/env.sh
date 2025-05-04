@@ -73,7 +73,7 @@ export OPERATING_PRIVATE_KEY="0x42f1bfd88712d4c6e18fdaa2fbc75509ca47ea26ff076c53
 #######
 
 export CLUSTER_ID="radius"
-export MAX_SEQUENCER_NUMBER=30
+export MAX_TX_ORDERER_NUMBER=30
 
 export ROLLUP_ID="radius_rollup"
 export OWNER_ADDRESS=$NETWORK_ADDRESS

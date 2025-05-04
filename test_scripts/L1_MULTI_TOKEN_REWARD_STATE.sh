@@ -150,7 +150,7 @@ execute_tx 57 "cast send \$STETH_DELEGATOR_ADDRESS --rpc-url \$RPC_URL --private
 execute_tx 58 "cast send \$STETH_DELEGATOR_ADDRESS --rpc-url \$RPC_URL --private-key \$VAULT_OWNER_PRIVATE_KEY \"setOperatorNetworkShares(bytes32 subnetwork, address operator, uint256 shares)\" \$SUBNETWORK \$STETH_OPERATOR_ADDRESS_SECONDARY 30" "Set STETH secondary operator shares (30%)"
 
 # Initialize Cluster and Rollups
-execute_tx 59 "cast send \$VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url \$RPC_URL --private-key \$NETWORK_PRIVATE_KEY \"initializeCluster(string clusterId, uint256 maxSequencerNumber)\" \$CLUSTER_ID \$MAX_SEQUENCER_NUMBER" "Initialize cluster"
+execute_tx 59 "cast send \$VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url \$RPC_URL --private-key \$NETWORK_PRIVATE_KEY \"initializeCluster(string clusterId, uint256 maxSequencerNumber)\" \$CLUSTER_ID \$MAX_TX_ORDERER_NUMBER" "Initialize cluster"
 execute_tx 60 "cast send \$VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url \$RPC_URL --private-key \$NETWORK_PRIVATE_KEY \"addRollup(string,(string,address,string,string,string,address,(string,string,address)))\" \"\$CLUSTER_ID\" \"(\$ROLLUP_ID, \$OWNER_ADDRESS, \$ROLLUP_TYPE, \$ENCRYPTED_TRANSACTION_TYPE, \$ORDER_COMMITMENT_TYPE, \$EXECUTOR_ADDRESS, (\$PLATFORM, \$SERVICE_PROVIDER, \$VALIDATION_ADDRESS))\"" "Add rollup"
 # execute_tx 61 "cast send \$VALIDATION_SERVICE_MANAGER_CONTRACT_ADDRESS --rpc-url \$RPC_URL --private-key \$NETWORK_PRIVATE_KEY \"registerRollupExecutor(string clusterId, string rollupId, address executorAddress)\" \$CLUSTER_ID \$ROLLUP_ID \$EXECUTOR_ADDRESS" "Register rollup executor"
 

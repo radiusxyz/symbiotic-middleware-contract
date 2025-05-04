@@ -263,7 +263,7 @@ cast send $STETH_DELEGATOR_ADDRESS --rpc-url $RPC_URL --private-key $VAULT_OWNER
 
 # # Initialize Cluster
 cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_SEQUENCER_NUMBER
+"initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_TX_ORDERER_NUMBER
 
 # # Add Rollup
 cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \

@@ -44,7 +44,7 @@ cast send $DELEGATOR_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $VAULT_OW
 "setOperatorNetworkShares(bytes32 subnetwork, address operator, uint256 shares)" $SUBNETWORK $OPERATOR_ADDRESS 10000
 
 cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-"initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_SEQUENCER_NUMBER
+"initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_TX_ORDERER_NUMBER
 
 cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
 "addRollup(string,(string,address,string,string,string,address,(string,string,address)))" \

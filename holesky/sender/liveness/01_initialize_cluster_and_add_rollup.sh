@@ -9,7 +9,7 @@ if echo "$clusters" | grep -q "$CLUSTER_ID"; then
     echo "Cluster already exists"
 else
     result=$(cast send $LIVENESS_CONTRACT_ADDRESS --rpc-url $RPC_URL --private-key $NETWORK_PRIVATE_KEY \
-    "initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_SEQUENCER_NUMBER)
+    "initializeCluster(string clusterId, uint256 maxSequencerNumber)" $CLUSTER_ID $MAX_TX_ORDERER_NUMBER)
 
     echo "Completed initializing the cluster"
 fi 

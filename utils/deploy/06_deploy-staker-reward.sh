@@ -11,4 +11,4 @@ fi
 
 cd $PROJECT_ROOT_PATH
 
-forge script script/deploy/OperatorRewardDeploy.sol:OperatorRewardDeploy --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv
+forge script script/deploy/StakerRewardDeploy.sol:StakerRewardDeploy --rpc-url $VALIDATION_RPC_URL --private-key $STAKER_REWARD_CONTRACT_OWNER_PRIVATE_KEY --broadcast -vvvv

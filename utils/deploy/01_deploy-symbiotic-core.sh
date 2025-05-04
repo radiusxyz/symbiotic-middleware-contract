@@ -14,4 +14,4 @@ fi
 
 cd $PROJECT_ROOT_PATH
 
-forge script script/deploy/SymbioticCoreDeploy.sol:SymbioticCoreDeploy --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvvv
+forge script script/deploy/SymbioticCoreDeploy.sol:SymbioticCoreDeploy --rpc-url $VALIDATION_RPC_URL --private-key $SYMBIOTIC_CORE_CONTRACT_OWNER_PRIVATE_KEY --broadcast -vvvv

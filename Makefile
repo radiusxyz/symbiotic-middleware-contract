@@ -18,16 +18,16 @@ deploy-collateral: ## Deploy collateral
 	./utils/deploy/02_deploy-collateral.sh
 
 deploy-burner-router: ## Deploy Burner Router
-	./utils/deploy/02_deploy-burner-router.sh
+	./utils/deploy/03_deploy-burner-router.sh
 
 deploy-vault: ## Deploy vault
-	./utils/deploy/03_deploy-vault.sh
+	./utils/deploy/04_deploy-vault.sh
 	
 deploy-operator-reward: ## Deploy operator reward
-	./utils/deploy/04_deploy-operator-reward.sh
+	./utils/deploy/05_deploy-operator-reward.sh
 
 deploy-staker-reward: ## Deploy staker reward
-	./utils/deploy/05_deploy-staker-reward.sh
+	./utils/deploy/06_deploy-staker-reward.sh
 
 deploy-liveness: ## Deploy liveness
 	./utils/deploy/07_deploy-liveness.sh
@@ -36,7 +36,7 @@ deploy-rewards-core: ## Deploy reward
 	./utils/deploy/08_deploy-rewards-core.sh
 
 deploy-validation-service-manager: ## Deploy validation service manager (AVS)
-	./utils/deploy/06_deploy-validation-service-manager.sh
+	./utils/deploy/09_deploy-validation-service-manager.sh
 
 
 
