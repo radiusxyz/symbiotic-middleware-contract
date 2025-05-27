@@ -14,7 +14,7 @@ import {Subnetwork} from "@symbiotic-core/src/contracts/libraries/Subnetwork.sol
 import {ICollateral} from "@symbiotic-collateral/src/interfaces/ICollateral.sol";
 
 import {MapWithTimeData} from "src/libraries/MapWithTimeData.sol";
-import {IValidationServiceManager} from "src/interfaces/IValidationServiceManager.sol";
+import {IValidationServiceManager as IVsmTypes} from "src/interfaces/IValidationServiceManager.sol";
 
 contract Registry is Ownable {
     using EnumerableMap for EnumerableMap.AddressToUintMap;
@@ -41,12 +41,11 @@ contract Registry is Ownable {
     EnumerableMap.AddressToUintMap private vaults;
     EnumerableMap.AddressToUintMap private operators;
 
-    mapping(address => IValidationServiceManager.Vault) public vaultDetails;
+    mapping(address => IVsmTypes.Vault) public vaultDetails;
     mapping(address => uint256) public minimumStakingAmounts;
     mapping(address => uint256) public slashAmounts;
 
 
-    // TxOrderer Registry state variables integrated directly into Registry
     mapping(address => Checkpoints.Trace208) private operatorToIndex;
     mapping(address => address) private txOrdererToOperator;
     mapping(uint208 => address) private indexToTxOrderer;
@@ -105,7 +104,7 @@ contract Registry is Ownable {
     ///////////// Network management
     function setSubnetworkCount(uint256 _subnetworkCount) external onlyOwner {
         if (subnetworkCount >= _subnetworkCount) {
-            revert IValidationServiceManager.InvalidSubnetworkCount();
+            revert IVsmTypes.InvalidSubnetworkCount();
         }
         subnetworkCount = _subnetworkCount;
     }
@@ -120,7 +119,7 @@ contract Registry is Ownable {
         address operatorRewards,
         address slasher
     ) {
-        IValidationServiceManager.Vault memory vaultInfo = vaultDetails[vault];
+        IVsmTypes.Vault memory vaultInfo = vaultDetails[vault];
         return (
             vaultInfo.tokenAddress,
             vaultInfo.stakerRewards,
@@ -183,11 +182,11 @@ contract Registry is Ownable {
     ///////////// Operator management
     function registerOperator(address operator, address txOrderer) external onlyOwner {
         if (operators.contains(operator)) {
-            revert IValidationServiceManager.OperatorAlreadyRegistered();
+            revert IVsmTypes.OperatorAlreadyRegistered();
         }
 
         if (!IOptInService(OPERATOR_NET_OPT_IN).isOptedIn(operator, NETWORK)) {
-            revert IValidationServiceManager.OperatorNotOptedIn();
+            revert IVsmTypes.OperatorNotOptedIn();
         }
 
         // Initialize both the operator registry and txOrderer registry
@@ -211,7 +210,7 @@ contract Registry is Ownable {
         (, uint48 disabledTime) = operators.getTimes(operator);
 
         if (disabledTime == 0) {
-            revert IValidationServiceManager.OperatorGracePeriodNotPassed();
+            revert IVsmTypes.OperatorGracePeriodNotPassed();
         }
 
         operators.remove(operator);
@@ -227,7 +226,7 @@ contract Registry is Ownable {
 
     function updateTxOrdererAddress(address operator, address txOrderer) external onlyOwner {
         if (!operators.contains(operator)) {
-            revert IValidationServiceManager.OperatorNotRegistered();
+            revert IVsmTypes.OperatorNotRegistered();
         }
 
         _updateTxOrdererAddress(operator, txOrderer);
@@ -235,15 +234,15 @@ contract Registry is Ownable {
         emit UpdateTxOrdererAddress(operator, txOrderer);
     }
 
-    function getCurrentOperatorInfos() public view returns (IValidationServiceManager.OperatorInfo[] memory operatorInfos) {
+    function getCurrentOperatorInfos() public view returns (IVsmTypes.OperatorInfo[] memory operatorInfos) {
         return getOperatorInfos(getCurrentEpoch());
     }
 
-    function getOperatorInfos(uint48 epoch) public view returns (IValidationServiceManager.OperatorInfo[] memory operatorInfos) {
+    function getOperatorInfos(uint48 epoch) public view returns (IVsmTypes.OperatorInfo[] memory operatorInfos) {
         uint48 epochStartTs = getEpochStartTs(epoch);
 
         uint256 operatorCount = operators.length();
-        operatorInfos = new IValidationServiceManager.OperatorInfo[](operatorCount);
+        operatorInfos = new IVsmTypes.OperatorInfo[](operatorCount);
         
         uint256 operatorIndex = 0;
 
@@ -254,9 +253,9 @@ contract Registry is Ownable {
 
             address txOrderer = getTxOrdererAddressAt(operator, epochStartTs);
 
-            IValidationServiceManager.StakeInfo[] memory tokenStakes = getOperatorAllTokenStakes(operator, epochStartTs);
+            IVsmTypes.StakeInfo[] memory tokenStakes = getOperatorAllTokenStakes(operator, epochStartTs);
 
-            operatorInfos[operatorIndex++] = IValidationServiceManager.OperatorInfo(operator, txOrderer, tokenStakes);
+            operatorInfos[operatorIndex++] = IVsmTypes.OperatorInfo(operator, txOrderer, tokenStakes);
         }
 
         assembly ("memory-safe") {
@@ -267,7 +266,7 @@ contract Registry is Ownable {
     ///////////// Token management
     function registerToken(address token) external onlyOwner {
         if (tokens.contains(token)) {
-            revert IValidationServiceManager.TokenAlreadyRegistered();
+            revert IVsmTypes.TokenAlreadyRegistered();
         }
 
         tokens.add(token);
@@ -302,7 +301,7 @@ contract Registry is Ownable {
         (, uint48 disabledTime) = tokens.getTimes(token);
 
         if (disabledTime == 0) {
-            revert IValidationServiceManager.TokenGracePeriodNotPassed();
+            revert IVsmTypes.TokenGracePeriodNotPassed();
         }
 
         tokens.remove(token);
@@ -365,33 +364,33 @@ contract Registry is Ownable {
     ///////////// Vault management
     function registerVault(address vault, address stakerRewards, address operatorRewards, address slasher) external onlyOwner {
         if (vaults.contains(vault)) {
-            revert IValidationServiceManager.VaultAlreadyRegistered();
+            revert IVsmTypes.VaultAlreadyRegistered();
         }
 
         if (!IRegistry(VAULT_REGISTRY).isEntity(vault)) {
-            revert IValidationServiceManager.VaultNotRegisteredInSymbiotic();
+            revert IVsmTypes.VaultNotRegisteredInSymbiotic();
         }
 
         if (!IRegistry(STAKER_REWARDS_REGISTRY).isEntity(stakerRewards)) {
-            revert IValidationServiceManager.StakerRewardNotRegistered();
+            revert IVsmTypes.StakerRewardNotRegistered();
         }
 
         if (!IRegistry(OPERATOR_REWARDS_REGISTRY).isEntity(operatorRewards)) {
-            revert IValidationServiceManager.OperatorRewardNotRegistered();
+            revert IVsmTypes.OperatorRewardNotRegistered();
         }
         if (!IRegistry(SLASHER_REGISTRY).isEntity(slasher)) {
-            revert IValidationServiceManager.VaultSlasherNotRegistered();
+            revert IVsmTypes.VaultSlasherNotRegistered();
         }
 
         address token = getTokenAddress(IVault(vault).collateral());
         if (!tokens.contains(token)) {
-            revert IValidationServiceManager.TokenNotWhitelisted();
+            revert IVsmTypes.TokenNotWhitelisted();
         }
 
         vaults.add(vault);
         vaults.enable(vault);
 
-        vaultDetails[vault] = IValidationServiceManager.Vault({
+        vaultDetails[vault] = IVsmTypes.Vault({
             tokenAddress: token,
             stakerRewards: stakerRewards,
             operatorRewards: operatorRewards,
@@ -413,7 +412,7 @@ contract Registry is Ownable {
         (, uint48 disabledTime) = vaults.getTimes(vault);
 
         if (disabledTime == 0) {
-            revert IValidationServiceManager.VaultGracePeriodNotPassed();
+            revert IVsmTypes.VaultGracePeriodNotPassed();
         }
 
         vaults.remove(vault);
@@ -481,19 +480,19 @@ contract Registry is Ownable {
       return totalStakeAmount;
     }
 
-    function getCurrentAllTokenTotalStakes() public view returns (IValidationServiceManager.StakeInfo[] memory tokenStakes) {
+    function getCurrentAllTokenTotalStakes() public view returns (IVsmTypes.StakeInfo[] memory tokenStakes) {
         return getAllTokenTotalStakes(getCurrentEpoch());
     }
 
-    function getAllTokenTotalStakes(uint48 epoch) public view returns (IValidationServiceManager.StakeInfo[] memory tokenStakes) {
+    function getAllTokenTotalStakes(uint48 epoch) public view returns (IVsmTypes.StakeInfo[] memory tokenStakes) {
       if (totalStakeCached[epoch]) {
           uint256 tokenCount = tokens.length();
-          tokenStakes = new IValidationServiceManager.StakeInfo[](tokenCount);
+          tokenStakes = new IVsmTypes.StakeInfo[](tokenCount);
           for (uint256 i; i < tokenCount; ++i) {
               (address token,,) = tokens.atWithTimes(i);
               uint256 tokenTotalStakeAmount = tokenTotalStakeCache[epoch][token];
 
-              tokenStakes[i] = IValidationServiceManager.StakeInfo(token, tokenTotalStakeAmount);
+              tokenStakes[i] = IVsmTypes.StakeInfo(token, tokenTotalStakeAmount);
           }
           
           return tokenStakes;
@@ -503,11 +502,11 @@ contract Registry is Ownable {
       uint256 tokenCount = tokens.length();
       uint256 operatorCount = operators.length();
 
-      tokenStakes = new IValidationServiceManager.StakeInfo[](tokenCount);
+      tokenStakes = new IVsmTypes.StakeInfo[](tokenCount);
       for (uint256 i; i < tokenCount; ++i) {
           (address token,,) = tokens.atWithTimes(i);
 
-          tokenStakes[i] = IValidationServiceManager.StakeInfo(token, 0);
+          tokenStakes[i] = IVsmTypes.StakeInfo(token, 0);
       }
       
       for (uint256 i; i < operatorCount; ++i) {
@@ -569,19 +568,19 @@ contract Registry is Ownable {
         return totalStake;
     }
 
-    function getCurrentOperatorAllTokenStakes(address operator) public view returns (IValidationServiceManager.StakeInfo[] memory tokenStakes) {
+    function getCurrentOperatorAllTokenStakes(address operator) public view returns (IVsmTypes.StakeInfo[] memory tokenStakes) {
         return getOperatorAllTokenStakes(operator, getCurrentEpoch());
     }
 
-    function getOperatorAllTokenStakes(address operator, uint48 epoch) public view returns (IValidationServiceManager.StakeInfo[] memory tokenStakes) {
+    function getOperatorAllTokenStakes(address operator, uint48 epoch) public view returns (IVsmTypes.StakeInfo[] memory tokenStakes) {
         if (totalStakeCached[epoch]) {
           uint256 tokenCount = tokens.length();
-          tokenStakes = new IValidationServiceManager.StakeInfo[](tokenCount);
+          tokenStakes = new IVsmTypes.StakeInfo[](tokenCount);
           for (uint256 i; i < tokenCount; ++i) {
               (address token,,) = tokens.atWithTimes(i);
               uint256 tokenStakeAmount = operatorStakeInfoCache[epoch][token][operator];
 
-              tokenStakes[i] = IValidationServiceManager.StakeInfo(token, tokenStakeAmount);
+              tokenStakes[i] = IVsmTypes.StakeInfo(token, tokenStakeAmount);
           }
           
           return tokenStakes;
@@ -590,7 +589,7 @@ contract Registry is Ownable {
         uint48 epochStartTs = getEpochStartTs(epoch);
         uint256 tokenCount = tokens.length();
 
-        tokenStakes = new IValidationServiceManager.StakeInfo[](tokenCount);
+        tokenStakes = new IVsmTypes.StakeInfo[](tokenCount);
         
         uint256 tokenIndex = 0;
 
@@ -602,7 +601,7 @@ contract Registry is Ownable {
             }
 
             uint256 tokenStake = getOperatorTokenStake(operator, token, epochStartTs);
-            tokenStakes[tokenIndex++] = IValidationServiceManager.StakeInfo(token, tokenStake);
+            tokenStakes[tokenIndex++] = IVsmTypes.StakeInfo(token, tokenStake);
         }
 
         assembly ("memory-safe") {
@@ -649,19 +648,19 @@ contract Registry is Ownable {
     function checkIncludingTxOrdererAddress(address currentTxOrderer) public view returns (bool) {
         address currentOperator = getOperatorWithTxOrdererAddress(currentTxOrderer);
         if (currentOperator == address(0) || !operators.contains(currentOperator)) {
-            revert IValidationServiceManager.OperatorNotRegistered();
+            revert IVsmTypes.OperatorNotRegistered();
         }
 
         uint48 epoch = getCurrentEpoch();
         uint48 epochStartTs = getEpochStartTs(epoch);
 
         if (epochStartTs > Time.timestamp()) {
-            revert IValidationServiceManager.InvalidEpoch();
+            revert IVsmTypes.InvalidEpoch();
         }
         
         (uint48 enabledTime, uint48 disabledTime) = operators.getTimes(currentOperator);
         if (!_wasActiveAt(enabledTime, disabledTime, epochStartTs)) {
-            revert IValidationServiceManager.OperatorNotActive();
+            revert IVsmTypes.OperatorNotActive();
         }
 
         bool hasEnoughStake = false;
@@ -700,7 +699,7 @@ contract Registry is Ownable {
 
     function _validateEpoch(uint48 epochStartTs) internal view {
         if (epochStartTs > Time.timestamp()) {
-            revert IValidationServiceManager.InvalidEpoch();
+            revert IVsmTypes.InvalidEpoch();
         }
     }
 }

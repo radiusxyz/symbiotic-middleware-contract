@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {Ownable} from "@openzeppelin-contracts/contracts/access/Ownable.sol";
-import "src/interfaces/ILivenessServiceManager.sol";
+import {ILivenessServiceManager} from "src/interfaces/ILivenessServiceManager.sol";
 
 contract LivenessServiceManager is Ownable {
     uint256 public constant BLOCK_MARGIN = 7;
@@ -17,12 +17,7 @@ contract LivenessServiceManager is Ownable {
     mapping(string => mapping(address => bool)) public isTxOrdererRegistered;
     mapping(string => mapping(string => mapping(address => bool))) public isExecutorRegistered;
     
-    // Events from ILivenessServiceManager
-    event InitializedCluster(string clusterId, address owner, uint256 maxTxOrdererNumber);
-    event RegisteredTxOrderer(string clusterId, address txOrderer, uint256 index);
-    event DeregisteredTxOrderer(string clusterId, address txOrderer);
-    event RegisteredRollupExecutor(string clusterId, string rollupId, address executor);
-    event AddedRollup(string clusterId, string rollupId, address rollupOwner);
+
 
     constructor() Ownable(msg.sender) {}
 
@@ -46,7 +41,7 @@ contract LivenessServiceManager is Ownable {
         clusterIdsByOwner[sender].push(clusterId);
         allClusterIds.push(clusterId);
 
-        emit InitializedCluster(clusterId, sender, maxTxOrdererNumber);
+        emit ILivenessServiceManager.InitializedCluster(clusterId, sender, maxTxOrdererNumber);
     }
 
     function getAllClusterIds() public view returns (string[] memory) {
@@ -97,7 +92,7 @@ contract LivenessServiceManager is Ownable {
         
         rollup.validationInfo = newRollup.validationInfo;
 
-        emit AddedRollup(clusterId, newRollup.rollupId, newRollup.owner);
+        emit ILivenessServiceManager.AddedRollup(clusterId, newRollup.rollupId, newRollup.owner);
     }
 
     function isRollupAdded(string calldata clusterId, string calldata rollupId) public view returns (bool) {
@@ -161,7 +156,7 @@ contract LivenessServiceManager is Ownable {
                 
                 clusterIdsByTxOrderer[sender].push(clusterId);
 
-                emit RegisteredTxOrderer(clusterId, sender, i);
+                emit ILivenessServiceManager.RegisteredTxOrderer(clusterId, sender, i);
                 return;
             }
         }
@@ -198,7 +193,7 @@ contract LivenessServiceManager is Ownable {
                 break;
             }
         }
-        emit DeregisteredTxOrderer(clusterId, sender);
+        emit ILivenessServiceManager.DeregisteredTxOrderer(clusterId, sender);
     }
 
     function getTxOrderers(string calldata clusterId) public view returns (address[] memory) {
@@ -248,7 +243,7 @@ contract LivenessServiceManager is Ownable {
         isExecutorRegistered[clusterId][rollupId][executor] = true;
         rollup.executors.push(executor);
 
-        emit RegisteredRollupExecutor(clusterId, rollupId, executor);
+        emit ILivenessServiceManager.RegisteredRollupExecutor(clusterId, rollupId, executor);
     }
 
     function getExecutors(string calldata clusterId, string calldata rollupId) public view returns (address[] memory) {
