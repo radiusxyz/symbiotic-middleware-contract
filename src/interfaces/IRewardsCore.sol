@@ -5,7 +5,7 @@ interface IRewardsCore {
     // Structs
     struct RewardPoolConfig {
         address rewardToken;
-        uint256 amounterPerTask;
+        uint256 amountPerTask;
         uint256 distributionInterval;
         uint256 lastDistribution;
         uint256 operatorRewardRatio;
@@ -35,7 +35,7 @@ interface IRewardsCore {
         string  clusterId,
         string  rollupId,
         uint256 newDistributionInterval,
-        uint256 newAmounterPerTask,
+        uint256 newAmountPerTask,
         uint256 newOperatorRewardRatio,
         uint256 newStakerRewardRatio
     );
@@ -82,7 +82,6 @@ interface IRewardsCore {
     error InsufficientBalance();
     error ZeroAddress();
     error InvalidMiddleware(address provided, address expected);
-    error OverflowDetected();
     error InsufficientPoolBalance(uint256 current, uint256 required);
     error ExceedsWithdrawalLimit(uint256 amount, uint256 maxAllowed);
     error InvalidAmount(uint256 amount, uint256 balance);
@@ -96,7 +95,7 @@ interface IRewardsCore {
     error ConfigExists();
     error InvalidERC20Token(address token);
     error StringInvalid(uint256 length, uint256 maxLength);
-    error InvalidNewAmounterPerTask();
+    error InvalidNewAmountPerTask();
     error InvalidNewDistributionInterval(uint256 interval, uint256 minInterval);
     error InvalidNewRewardRatios(uint256 operatorRatio, uint256 stakerRatio);
     error DepositorAlreadyWhitelisted(address depositor);
@@ -113,12 +112,6 @@ interface IRewardsCore {
         string calldata rollupId,
         uint256 approvalAmount
     ) external returns (uint256);
-
-    function updateLastDistribution(
-        address network,
-        string calldata clusterId,
-        string calldata rollupId
-    ) external ;
 
     function getDistributionInfo(
         string calldata clusterId,
@@ -137,7 +130,7 @@ interface IRewardsCore {
         string calldata clusterId,
         string calldata rollupId,
         address rewardToken,
-        uint256 amounterPerTask,
+        uint256 amountPerTask,
         uint256 distributionInterval,
         uint256 operatorRewardRatio,
         uint256 stakerRewardRatio
@@ -147,7 +140,7 @@ interface IRewardsCore {
         string calldata clusterId,
         string calldata rollupId,
         uint256 newDistributionInterval,
-        uint256 newAmounterPerTask,
+        uint256 newAmountPerTask,
         uint256 newOperatorRewardRatio,
         uint256 newStakerRewardRatio
     ) external;

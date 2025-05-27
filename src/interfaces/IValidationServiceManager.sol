@@ -43,6 +43,7 @@ interface IValidationServiceManager {
     error InvalidSignature();
     error SlashRequestNotFound();
     error SlashRequestAlreadyProcessed();
+    error ResponsePeriodNotExpired();
     error InvalidSlashResponder();
     error EthTransferFailed();
     error EthRefundFailed();
@@ -51,6 +52,11 @@ interface IValidationServiceManager {
     error SlashCreditAlreadyProcessed();
     error SlashCreditNotFound();
     error InvalidSlashPeriod();
+    error SlashRequestNotCompleted();
+    error InsufficientBalance();
+    error SlashRequestInProcessing();
+    error StateTransitionError();
+    error SlashingPartialFailure();
 
     struct Vault {
         address tokenAddress;
@@ -97,6 +103,7 @@ interface IValidationServiceManager {
 
    enum Status {
         Pending,
+        Processing,
         Processed
     }
 
@@ -153,7 +160,6 @@ interface IValidationServiceManager {
 
     event TaskResponded(string clusterId, string rollupId, uint256 referenceTaskIndex, bool response, address responder);
 
-    event RewardsDistributed(string clusterId, string rollupId, uint256 referenceTaskIndex);
 
     event TaskThresholdMet(string clusterId, string rollupId, uint256 referenceTaskIndex);
     event DistributionDataSaved(string clusterId, string rollupId, uint256 rewardedTaskindex);
