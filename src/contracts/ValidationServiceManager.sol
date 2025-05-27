@@ -214,6 +214,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         livenessServiceManager.registerRollupExecutor(clusterId, rollupId, executor, msg.sender);
     }
 
+    // Task Manager Methods
     function createNewTask(Task calldata task, DistributionParams calldata distributionParams) external     updateStakeCache(getCurrentEpoch())
     {
         if (!registry.checkIncludingTxOrdererAddress(msg.sender)) {
@@ -224,7 +225,7 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         }
 
         uint256 latestTaskNumber = taskManager.getLatestTaskNumber(task.rollupId);
-        taskManager.createNewTask(task, distributionParams, msg.sender);
+        taskManager.createNewTask(task, msg.sender);
 
         if (latestTaskNumber > 0 && distributionParams.operatorMerkleRoots.length > 0) {
             rewardsManager.storeDistributionData(
@@ -244,11 +245,11 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
     function executeDistributions(string calldata clusterId, string calldata rollupId) external nonReentrant {
         (
             bool isEligible,
-            uint256 availableAmount,
+            ,  // availableAmount - unused
             address rewardToken,
-            uint256 timeUntilNextDistribution,
-            uint256 operatorAmount,
-            uint256 stakerAmount
+            ,  // timeUntilNextDistribution - unused
+            ,  // operatorAmount - unused
+            // stakerAmount - unused (last parameter can be omitted)
         ) = IRewardsCore(REWARDS_CORE_ADDRESS).getDistributionInfo(clusterId, rollupId);
 
         if (!isEligible) {
@@ -258,20 +259,12 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         uint256 startingTaskIndex = rewardsManager.getLatestDistributedTaskIndex(clusterId, rollupId);
         uint256 taskCount = taskManager.getLatestTaskNumber(rollupId) + 1;
         
-        (
-            RewardsManager.AggregatedDistributionData memory aggregatedData,
-            uint256 totalRewardsRequired
-        ) = rewardsManager.processDistributionData(
-            clusterId, 
-            rollupId, 
-            startingTaskIndex, 
-            taskCount,
-            taskManager.getTaskResponseCount  
-        );
+        ( 
+            RewardsManager.AggregatedDistributionData memory aggregatedData, 
+            uint256 totalRewardsRequired 
+        ) = rewardsManager.processDistributionData( clusterId, rollupId, startingTaskIndex, taskCount );
         
-        if (aggregatedData.taskCount == 0) {
-            revert NoPendingDistributions();
-        }
+        if (aggregatedData.taskCount == 0) { revert NoPendingDistributions(); }
         
         uint256 approvedAmount = IRewardsCore(REWARDS_CORE_ADDRESS).approveRewardDistribution(
             NETWORK, clusterId, rollupId, totalRewardsRequired
@@ -286,8 +279,6 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         }
         
         rewardsManager.markMultipleDistributionsAsCompleted(clusterId, rollupId, aggregatedData.taskIndices);
-        
-        emit RewardsDistributed(clusterId, rollupId, aggregatedData.taskIndices[aggregatedData.taskIndices.length - 1]);
     }
 
     function _distributeToVault( address rewardToken, address vaultAddress, bytes32 operatorMerkleRoot, uint256 stakerReward, uint256 operatorReward, uint48 oneSecondAgo ) internal {
@@ -299,17 +290,13 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         (tokenAddress, stakerRewards, operatorRewards, slasher) = registry.getVaultDetails(vaultAddress);
 
         if (stakerRewards != address(0)) {
-            _safeTokenApprove(rewardToken, stakerRewards, stakerReward);
-            IDefaultStakerRewards(stakerRewards).distributeRewards(
-                NETWORK, rewardToken, stakerReward, abi.encode(oneSecondAgo, 10000, new bytes(0), new bytes(0))
-            );
+            _safeTokenApprove(rewardToken, stakerRewards, stakerReward); 
+            IDefaultStakerRewards(stakerRewards).distributeRewards( NETWORK, rewardToken, stakerReward, abi.encode(oneSecondAgo, 10000, new bytes(0), new bytes(0)) );
         }
 
         if (operatorRewards != address(0)) {
             _safeTokenApprove(rewardToken, operatorRewards, operatorReward);
-            IDefaultOperatorRewards(operatorRewards).distributeRewards(
-                NETWORK, rewardToken, operatorReward, operatorMerkleRoot
-            );
+            IDefaultOperatorRewards(operatorRewards).distributeRewards( NETWORK, rewardToken, operatorReward, operatorMerkleRoot );
         }
     }
 
@@ -327,7 +314,6 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
     function getDistributionData( string memory clusterId, string memory rollupId, uint256 referenceTaskId ) public view returns (
         address[] memory vaultAddresses, bytes32[] memory operatorMerkleRoots, uint256[] memory totalStakerReward, uint256[] memory totalOperatorReward, bool distributed
     )
-
     {
         (vaultAddresses, operatorMerkleRoots, totalStakerReward, totalOperatorReward, distributed) = rewardsManager.getDistributionData(clusterId, rollupId, referenceTaskId);
     }
@@ -374,121 +360,85 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
     }
 
     function respondToSlash(bytes32 txHash, bytes32[] calldata postMerklePath) external nonReentrant {
-       
         SlashRequest memory slashRequest = slashingManager.getSlashRequestDetails(txHash);
-
-       
+        
         if (slashRequest.txHash == bytes32(0)) {
-            console.log("Slash request not found for txHash");
             revert SlashRequestNotFound();
         }
-
+        
         if (slashRequest.status != Status.Pending) {
-            console.log("Slash request already processed");
             revert SlashRequestAlreadyProcessed();
         }
-
+        
         if (msg.sender != slashRequest.operator) {
-            console.log("Invalid responder for slash request. Expected %s", msg.sender);
             revert InvalidSlashResponder();
         }
-
-        bool inResponsePeriod = (block.timestamp <= slashRequest.timestamp + SLASH_PERIOD);
-        console.log("inResponsePeriod for txHash: %s", inResponsePeriod);
-
+        
+        bool inResponsePeriod = block.timestamp <= slashRequest.timestamp + SLASH_PERIOD;
+        
+        slashingManager.updateSlashRequestStatus(txHash, Status.Processed);
+        
         if (!inResponsePeriod) {
-            console.log("Response period expired for txHash ");
-            slashingManager.updateSlashRequestStatus(txHash, Status.Processed);
             _processInvalidOrExpiredSlash(txHash, slashRequest);
             emit SlashResponded(txHash, slashRequest.operator, slashRequest.requester, false, Status.Processed);
-            return;  
+            return;
         }
-
+        
         uint256 taskIndex = taskManager.getTaskIndexFromBatchNumber(slashRequest.rollupId, slashRequest.batchNumber);
         bytes32 merkleRoot = taskManager.getBatchCommitment(slashRequest.rollupId, taskIndex);
         bool isValid = slashingManager.validateMerkleProof(txHash, merkleRoot, postMerklePath);
-        console.log("Merkle proof validation result for txHash: %s", isValid);
-
-        slashingManager.updateSlashRequestStatus(txHash, Status.Processed);
-
+        
         if (isValid) {
-            // Valid proof: Operator post merkle valid. Slash requester's deposit -> operator.
-            console.log("Valid response for txHash. Refunding operator.");
-            _safeTransferEth(payable(slashRequest.operator), slashRequest.depositAmount);
+            _processValidSlashResponse(slashRequest);
         } else {
-            // Invalid proof: Operator post merkle invalid. Refund requester, slash operator.
-            console.log("Invalid response for txHash. Refunding requester and slashing operator.");
             _processInvalidOrExpiredSlash(txHash, slashRequest);
         }
-
+        
         emit SlashResponded(txHash, slashRequest.operator, slashRequest.requester, isValid, Status.Processed);
     }
 
     function _handleInvalidSlashResponse(bytes32 txHash, SlashRequest memory slashRequest) internal returns (bool) {
         StakeInfo[] memory operatorStakes = registry.getCurrentOperatorAllTokenStakes(slashRequest.operator);
-
+        
         if (operatorStakes.length == 0) {
-            console.log("Operator has no stakes to slash for txHash.");
-            return false;  
+            return false;
         }
-        console.log("Found %d staked tokens for operator %s for txHash", operatorStakes.length, slashRequest.operator);
-
-        bool anySlashSucceeded = false;
-        uint48 captureTimestamp = uint48(block.timestamp - 5);  
-        bytes32 subnetwork = registry.getSubnetwork(0);  
-
-        address[] memory allVaults = registry.getCurrentVaults();  
-
+        
+        uint48 captureTimestamp = uint48(block.timestamp - 5);
+        bytes32 subnetwork = registry.getSubnetwork(0);
+        address[] memory allVaults = registry.getCurrentVaults();
+        
         for (uint256 i = 0; i < operatorStakes.length; i++) {
+            if (operatorStakes[i].stakeAmount == 0) continue;
+            
             address tokenAddress = operatorStakes[i].token;
-            uint256 stakeAmount = operatorStakes[i].stakeAmount;  
-
-            if (stakeAmount == 0) {  
-                continue;
-            }
-            console.log("Processing token %s for operator %s ", tokenAddress, slashRequest.operator);
-
+            
             for (uint256 j = 0; j < allVaults.length; j++) {
-                address currentVaultAddress = allVaults[j];
-                (address tokenFromVault, , , address slasher) = registry.getVaultDetails(currentVaultAddress);
-
-                if (tokenFromVault == tokenAddress && slasher != address(0)) {
-                    console.log("Found matching vault %s for token %s", currentVaultAddress, tokenAddress);
-                    uint256 slashAmount = registry.getSlashAmount(tokenAddress);  
-                    uint64 slasherType = IBaseSlasher(slasher).TYPE();  
-
-                    console.log("Attempting slash ");
-                    console.log("Vault", currentVaultAddress);
-                    console.log("tokenAddress", tokenAddress);
-                    console.log("slashAmount", slashAmount);
-                    console.log("slasherType", slasherType);
-
-                    bool slashSuccess = _executeSlash(
-                        txHash, currentVaultAddress, slashRequest, tokenAddress,
+                address vaultAddress = allVaults[j];
+                (address vaultToken, , , address slasher) = registry.getVaultDetails(vaultAddress);
+                
+                if (vaultToken == tokenAddress && slasher != address(0)) {
+                    uint256 slashAmount = registry.getSlashAmount(tokenAddress);
+                    uint64 slasherType = IBaseSlasher(slasher).TYPE();
+                    
+                    if (_executeSlash(
+                        txHash, vaultAddress, slashRequest, tokenAddress,
                         slashAmount, slasher, subnetwork, captureTimestamp, slasherType
-                    );
-
-                    if (slashSuccess) {
-                        anySlashSucceeded = true;
-                    } else {
-                        console.log("Slash attempt failed for Vault %s, Token %s", currentVaultAddress, tokenAddress);
+                    )) {
+                        return true;
                     }
-                   
-                    break;  
+                    break;
                 }
             }
         }
-
-        if (!anySlashSucceeded) {
-            console.log("No slash attempts were successful for operator %s", slashRequest.operator);
-        }
-
-        return anySlashSucceeded;  
+        
+        return false;
     }
+
 
     function _executeSlash(
         bytes32 txHash,
-        address vaultForToken,  
+        address vaultAddress,
         SlashRequest memory slashRequest,
         address tokenAddress,
         uint256 slashAmount,
@@ -497,127 +447,135 @@ contract ValidationServiceManager is Ownable, IValidationServiceManager, Reentra
         uint48 captureTimestamp,
         uint64 slasherType
     ) internal returns (bool) {
-        if (slasherType == INSTANT_SLASHER_TYPE) {  
-            try ISlasher(slasherAddress).slash(
-                subnetwork, slashRequest.operator, slashAmount, captureTimestamp, new bytes(0)  
+        if (slasherType == INSTANT_SLASHER_TYPE) {
+            try ISlasher(slasherAddress).slash( subnetwork, slashRequest.operator, slashAmount, captureTimestamp, new bytes(0)
             ) returns (uint256 slashedAmount) {
-                slashingManager.createSlashCredit(
-                    txHash, vaultForToken, slashRequest.requester, tokenAddress,
-                    slashedAmount,  
-                    INSTANT_SLASHER_TYPE, 
-                    0   
-                );
-                console.log("Instant Slash successful: Vault=%s, Operator=%s, Amount=%d", vaultForToken, slashRequest.operator, slashedAmount);
+                slashingManager.createSlashCredit( txHash, vaultAddress, slashRequest.requester, tokenAddress, slashedAmount, INSTANT_SLASHER_TYPE, 0 );
                 return true;
-            } catch Error(string memory reason) {
-                console.log("Instant Slasher Slash Failed: Vault=%s, Reason=%s", vaultForToken, reason);
-                return false;
             } catch {
-                console.log("Instant Slasher Slash Failed with unknown error: Vault=%s", vaultForToken);
                 return false;
             }
-        } else if (slasherType == VETO_SLASHER_TYPE) {  
-            try IVetoSlasher(slasherAddress).requestSlash(
-                subnetwork, slashRequest.operator, slashAmount, captureTimestamp, new bytes(0)  
+        } else if (slasherType == VETO_SLASHER_TYPE) {
+            try IVetoSlasher(slasherAddress).requestSlash( subnetwork, slashRequest.operator, slashAmount, captureTimestamp, new bytes(0)
             ) returns (uint256 slashIndex) {
-                slashingManager.createSlashCredit(
-                    txHash, vaultForToken, slashRequest.requester, tokenAddress,
-                    slashAmount,  
-                    VETO_SLASHER_TYPE,
-                    slashIndex  
-                );
-                console.log("Veto Slash Request successful ");
-                console.log("Vault", vaultForToken);
-                console.log("slashRequest.operator", slashRequest.operator);
-                console.log("slashAmount", slashAmount);
-                console.log("slashIndex", slashIndex);
+                slashingManager.createSlashCredit( txHash, vaultAddress, slashRequest.requester, tokenAddress, slashAmount, VETO_SLASHER_TYPE, slashIndex );
                 return true;
-            } catch Error(string memory reason) {
-                console.log("Veto Slasher Request Failed: Vault=%s, Reason=%s", vaultForToken, reason);
-                return false;
             } catch {
-                console.log("Veto Slasher Request Failed with unknown error: Vault=%s", vaultForToken);
                 return false;
             }
-        } else {
-            
-            console.log("Unknown slasher type %d for slasher %s", slasherType, slasherAddress);
-            return false;
         }
+        
+        return false;
     }
+
 
 
     function processSlashRequest(bytes32 txHash) external nonReentrant {
         SlashRequest memory slashRequest = slashingManager.getSlashRequestDetails(txHash);
-
+        
         if (slashRequest.txHash == bytes32(0)) {
             revert SlashRequestNotFound();
         }
-
+        
         if (slashRequest.status != Status.Pending) {
             revert SlashRequestAlreadyProcessed();
         }
-
-      
-        bool responsePeriodExpired = (block.timestamp > slashRequest.timestamp + SLASH_PERIOD);
-
-        if (!responsePeriodExpired) {
-            revert("Slash response period has not expired yet.");  
+        
+        if (block.timestamp <= slashRequest.timestamp + SLASH_PERIOD) {
+            revert ResponsePeriodNotExpired();
         }
-
-        console.log("Processing expired slash request txHash");
-
+        
         slashingManager.updateSlashRequestStatus(txHash, Status.Processed);
-
         _processInvalidOrExpiredSlash(txHash, slashRequest);
-
+        
         emit SlashResponded(txHash, slashRequest.operator, slashRequest.requester, false, Status.Processed);
     }
 
+
     function processSlashCredit(bytes32 txHash) external nonReentrant {
-        IValidationServiceManager.SlashCredit memory credit = slashingManager.getSlashCredit(txHash);
-
+        SlashCredit memory credit = slashingManager.getSlashCredit(txHash);
+        
         if (credit.requester == address(0)) {
-            revert IValidationServiceManager.SlashCreditNotFound();
-        }
-
-        if (credit.status != IValidationServiceManager.SlashCreditStatus.Pending) {
-            revert IValidationServiceManager.SlashCreditAlreadyProcessed();
-        }
-
-        address collateralTokenAddress = registry.getVaultCollateral(credit.vault);
-        if (collateralTokenAddress == address(0)) {
-            revert IValidationServiceManager.TokenNotWhitelisted(); 
-        }
-        console.log("Processing credit for txHash");
-
-        console.log("Vault", credit.vault);
-        console.log("collateralTokenAddress", collateralTokenAddress);
-        console.log("credit.requester", credit.requester);
-        console.log("credit.amount", credit.amount);
-
-       
-        if (credit.amount > 0) {
-            IERC20(collateralTokenAddress).safeTransfer(credit.requester, credit.amount);
-            console.log("Token transfer successful");
-        } else {
-             console.log("Credit amount is 0 for txHash, skipping transfer.");
+            revert SlashCreditNotFound();
         }
         
-        slashingManager.updateSlashCreditStatus(txHash, IValidationServiceManager.SlashCreditStatus.Processed);
-        console.log("Updated credit status to Processed for txHash");
+        if (credit.status != SlashCreditStatus.Pending) {
+            revert SlashCreditAlreadyProcessed();
+        }
+        
+        address collateralToken = registry.getVaultCollateral(credit.vault);
+        if (collateralToken == address(0)) {
+            revert TokenNotWhitelisted();
+        }
+        
+        if (credit.slasherType == INSTANT_SLASHER_TYPE) {
+            if (credit.amount > 0) {
+                uint256 contractBalance = IERC20(collateralToken).balanceOf(address(this));
+                if (contractBalance < credit.amount) {
+                    revert InsufficientBalance();
+                }
+                
+                IERC20(collateralToken).safeTransfer(credit.requester, credit.amount);
+            }
+            
+            slashingManager.updateSlashCreditStatus(txHash, SlashCreditStatus.Processed);
+            
+        } else if (credit.slasherType == VETO_SLASHER_TYPE) {
+            (, , , address slasher) = registry.getVaultDetails(credit.vault);
+            
+            if (slasher == address(0)) {
+                revert VaultSlasherNotRegistered();
+            }
+            
+            (
+                ,  // - unused bytes32 subnetwork,
+                ,  // -address operator,
+                ,  // -uint256 amount,
+                ,  // -uint48 captureTimestamp,
+                uint48 vetoDeadline,
+                bool completed
+            ) = IVetoSlasher(slasher).slashRequests(credit.slashIndex);
+            
+            if (!completed) {
+                revert SlashRequestNotCompleted();
+            }
+            
+            if (block.timestamp > vetoDeadline) {
+                if (credit.amount > 0) {
+                    uint256 contractBalance = IERC20(collateralToken).balanceOf(address(this));
+                    if (contractBalance < credit.amount) {
+                        revert InsufficientBalance();
+                    }
+                    
+                    IERC20(collateralToken).safeTransfer(credit.requester, credit.amount);
+                }
+                
+                slashingManager.updateSlashCreditStatus(txHash, SlashCreditStatus.Processed);
+            } else {
+                slashingManager.updateSlashCreditStatus(txHash, SlashCreditStatus.Failed);
+            }
+            
+        } else {
+            revert UnknownSlasherType();
+        }
+        
+        emit SlashCreditProcessed(txHash, 0, credit.requester, collateralToken, credit.amount);
     }
 
-    function _processInvalidOrExpiredSlash(bytes32 _txHash, SlashRequest memory _slashRequest) internal {
-        _safeTransferEth(payable(_slashRequest.requester), _slashRequest.depositAmount);
-        console.log("Refunded requester for txHash");
-        bool slashingSucceeded = _handleInvalidSlashResponse(_txHash, _slashRequest);
-        if (!slashingSucceeded) {
-            revert OperatorSlashingFailed();
-        }
-        console.log("Slashed operator for txHash");
-        console.log("Vault", _slashRequest.operator);
-                
+
+
+    function _processInvalidOrExpiredSlash(bytes32 txHash, SlashRequest memory slashRequest) internal {
+    bool slashingSucceeded = _handleInvalidSlashResponse(txHash, slashRequest);
+    
+    if (!slashingSucceeded) {
+        revert OperatorSlashingFailed();
+    }
+    
+    _safeTransferEth(payable(slashRequest.requester), slashRequest.depositAmount);
+    }
+
+    function _processValidSlashResponse(SlashRequest memory slashRequest) internal {
+        _safeTransferEth(payable(slashRequest.operator), slashRequest.depositAmount);
     }
 
     receive() external payable {}
