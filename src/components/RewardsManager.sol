@@ -4,18 +4,17 @@ pragma solidity 0.8.25;
 import {Ownable} from "@openzeppelin-contracts/contracts/access/Ownable.sol";
 import {IValidationServiceManager as IVsmTypes} from "src/interfaces/IValidationServiceManager.sol";
 
-import {ITaskManager} from "src/interfaces/ITaskManager.sol";
+import {TaskManager} from "src/components/TaskManager.sol";
 import {IRewardsManager} from "src/interfaces/IRewardsManager.sol";
 contract RewardsManager is Ownable {
     mapping(string => mapping(string => mapping(uint256 => IVsmTypes.DistributionData))) public distributionDataByTask;
     
     mapping(string => mapping(string => uint256)) public latestDistributedTaskIndex;
     
-    ITaskManager public taskManager;
-    constructor() Ownable(msg.sender) {}
-
-    function setTaskManager(address _taskManager) external onlyOwner {
-        taskManager = ITaskManager(_taskManager);
+    TaskManager public taskManager;
+    constructor(address _taskManager) 
+    Ownable(msg.sender) {
+         taskManager = TaskManager(_taskManager);
     }
 
     function storeDistributionData( string calldata clusterId, string calldata rollupId, uint256 pendingRewardTaskIndex, IVsmTypes.DistributionParams calldata distributionParams ) external onlyOwner {

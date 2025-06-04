@@ -21,7 +21,7 @@ contract ValidationServiceManagerDeploy is Script, Utils {
         vm.startBroadcast();
 
         string memory symbioticCoreDeploymentOutput = readOutput(symbioticCoreDeploymentOutput);
-        address operatorRegistryAddress = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.operatorRegistry"));
+        // address operatorRegistryAddress = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.operatorRegistry"));
         address vaultRegistry = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.vaultFactory"));
         address slasherRegistry = convertAddress(vm.parseJson(symbioticCoreDeploymentOutput, ".addresses.slasherFactory"));
 
@@ -50,12 +50,7 @@ contract ValidationServiceManagerDeploy is Script, Utils {
             address(registry)
         );
 
-        RewardsManager rewardsManager = new RewardsManager();
-        vm.serializeAddress(
-            deployedContractAddresses,
-            "rewardsManager",
-            address(rewardsManager)
-        );
+        
     
         SlashingManager slashingManager = new SlashingManager(network);
         vm.serializeAddress(
@@ -64,13 +59,21 @@ contract ValidationServiceManagerDeploy is Script, Utils {
             address(slashingManager)
         );
         
-        TaskManager taskManager = new TaskManager();
+        TaskManager taskManager = new TaskManager(address(registry));
         vm.serializeAddress(
             deployedContractAddresses,
             "taskManager",
             address(taskManager)
         );
         
+        RewardsManager rewardsManager = new RewardsManager(address(taskManager));
+        vm.serializeAddress(
+            deployedContractAddresses,
+            "rewardsManager",
+            address(rewardsManager)
+        );
+
+
         LivenessServiceManager livenessServiceManager = new LivenessServiceManager();
         vm.serializeAddress(
             deployedContractAddresses,
